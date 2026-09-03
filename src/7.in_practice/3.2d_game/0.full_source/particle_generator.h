@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：理解固定容量 CPU 粒子池如何复用失效粒子，并用共享四边形逐个绘制透明轨迹。
 // 核心流程：Update 复活少量粒子并推进全部存活粒子，Draw 上传每粒子的偏移/颜色后使用加法混合。
-// 生命周期：Particle 的 Life 决定槽位是否可复用；生成器持有池、共享纹理/Shader 句柄和一个 VAO。
+// CPU 生命周期：Particle 的 Life 决定槽位是否可复用；生成器持有粒子池以及共享的纹理/Shader 句柄。
+// 当前限制：类没有析构函数，VAO 与 init 中仅作为局部变量创建的 VBO 都没有对应 glDelete；删除生成器只会释放 CPU 成员。
 
 #ifndef PARTICLE_GENERATOR_H
 #define PARTICLE_GENERATOR_H

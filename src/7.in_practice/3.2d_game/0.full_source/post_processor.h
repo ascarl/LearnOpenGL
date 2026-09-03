@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：理解多重采样离屏渲染、颜色 resolve 与全屏后处理三个阶段。
 // 核心流程：BeginRender 绑定 MSFBO，EndRender blit 到可采样纹理，Render 在全屏四边形上执行特效 Shader。
-// 生命周期：对象持有两个 FBO、一个多采样 RBO、resolve 纹理和屏幕 VAO；调用顺序是其正确工作的前提。
+// 调用顺序：对象持有两个 FBO、一个多采样 RBO、resolve 纹理和屏幕 VAO；BeginRender、EndRender、Render 的顺序是正确工作的前提。
+// 当前限制：类没有析构函数，MSFBO/FBO/RBO、resolve Texture、VAO 与 initRenderData 的局部 VBO 均没有对应的 GPU 删除路径。
 
 #ifndef POST_PROCESSOR_H
 #define POST_PROCESSOR_H

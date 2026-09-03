@@ -8,7 +8,7 @@
 ******************************************************************/
 // LearnOpenGL 中文导读
 // 阶段快照：第 9 阶段，在道具与视觉效果之上加入循环背景音乐和碰撞/拾取事件音效。
-// 核心流程：Game 初始化时创建并使用 irrKlang 引擎，具体碰撞分支播放短音效，析构时 drop 归还引擎引用。
+// 核心流程：文件作用域初始化在 main 之前调用 createIrrKlangDevice；Game::Init 只用既有引擎启动背景音乐，碰撞分支播放短音效，析构时 drop 引用。
 // 职责边界：音频是游戏事件的副作用，不参与碰撞计算或渲染；各事件在状态确认后才触发声音。
 
 #include <algorithm>
@@ -30,6 +30,7 @@ GameObject        *Player;
 BallObject        *Ball;
 ParticleGenerator *Particles;
 PostProcessor     *Effects;
+// 这是文件作用域静态初始化，不是 Game::Init 的一部分；程序进入 main 时引擎指针已经完成初始化。
 ISoundEngine      *SoundEngine = createIrrKlangDevice();
 
 float ShakeTime = 0.0f;

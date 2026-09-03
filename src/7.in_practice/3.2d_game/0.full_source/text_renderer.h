@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：把独立文字示例封装为可复用 TextRenderer，供游戏 HUD、菜单和胜利界面调用。
 // 核心流程：Load 预编译字体字形纹理与度量，RenderText 逐字符改写动态 VBO 并绘制透明四边形。
-// 生命周期：Characters 缓存当前字体的 ASCII 字形；再次 Load 会替换映射，VAO/VBO 在渲染器实例内复用。
+// CPU 生命周期：Characters 缓存当前字体的 ASCII 字形；再次 Load 会清空并重建映射，VAO/VBO 在实例内复用。
+// 当前限制：清空 Characters 前没有删除旧字形纹理，类也没有析构函数，因此字形纹理以及 VAO/VBO 都缺少完整的 GPU 释放路径。
 
 #ifndef TEXT_RENDERER_H
 #define TEXT_RENDERER_H

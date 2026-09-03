@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：把共享单位四边形转换为任意位置、尺寸、旋转和颜色的 2D 精灵。
 // 核心流程：构造时建立 VAO/VBO，DrawSprite 设置 model 与颜色、绑定纹理并绘制六个顶点。
-// 生命周期：渲染器拥有 quadVAO 并在析构时删除；Shader/Texture 句柄由 ResourceManager 管理。
+// 当前限制：析构函数只删除 quadVAO，initRenderData 的局部 VBO 没有保存和删除；Shader/Texture 句柄仍由 ResourceManager 管理。
+// 时序问题：本示例由全局 Breakout 间接持有渲染器，析构发生在 glfwTerminate 之后，因此 glDeleteVertexArrays 调用时已没有有效上下文。
 
 #ifndef SPRITE_RENDERER_H
 #define SPRITE_RENDERER_H

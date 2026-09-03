@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：理解以字符串名称缓存 Shader 与 Texture2D 的静态资源管理器。
 // 核心流程：Load 从文件创建 GPU 对象并写入映射，Get 返回轻量句柄副本，Clear 统一删除 OpenGL 对象。
-// 生命周期：ResourceManager 本身不可实例化；Clear 必须在有效 OpenGL 上下文仍存在时调用。
+// 生命周期：ResourceManager 本身不可实例化；Clear 必须在有效 OpenGL 上下文仍存在时调用，并且只覆盖映射中的 Shader 程序与 Texture2D。
+// 所有权边界：精灵、粒子、后处理和文字渲染器自行创建的 VAO/VBO、FBO/RBO、后处理纹理及字形纹理都不属于这两个映射，Clear 不会释放它们。
 
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H

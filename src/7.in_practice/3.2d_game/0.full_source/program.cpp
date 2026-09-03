@@ -8,8 +8,9 @@
 ******************************************************************/
 // LearnOpenGL 中文导读
 // 学习目标：建立 Breakout 的窗口入口与固定顺序游戏循环，把平台事件转交给 Game 状态机。
-// 核心流程：创建 OpenGL 上下文后初始化 Game，每帧按输入、更新、绘制执行，退出前释放缓存的 GPU 资源。
-// 生命周期：Game 持有玩法对象，ResourceManager 持有共享 Shader/Texture 句柄；清理必须发生在 GLFW 上下文销毁前。
+// 核心流程：创建 OpenGL 上下文后初始化 Game，每帧按输入、更新、绘制执行；退出循环时只显式清理 ResourceManager 的缓存资源。
+// 当前限制：Breakout 是全局对象，要到 main 返回后才析构；此时 glfwTerminate 已销毁上下文，SpriteRenderer 才调用的 GL 删除已经过晚。
+// 资源缺口：ParticleGenerator、PostProcessor、TextRenderer 没有对应析构函数，其 VAO/VBO、FBO/RBO、后处理纹理及字形纹理未被完整释放。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -28,6 +29,7 @@ const unsigned int SCREEN_WIDTH = 800;
 // The height of the screen
 const unsigned int SCREEN_HEIGHT = 600;
 
+// 全局对象的析构晚于 main 内的 glfwTerminate，这个示例没有建立正确的“先释放全部 GPU 对象，再销毁上下文”顺序。
 Game Breakout(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 int main(int argc, char *argv[])
@@ -97,10 +99,12 @@ int main(int argc, char *argv[])
         glfwSwapBuffers(window);
     }
 
+    // 这里只删除 ResourceManager 映射中的 Shader/Texture；Breakout 持有的渲染组件此时尚未析构。
     // delete all resources as loaded using the resource manager
     // ---------------------------------------------------------
     ResourceManager::Clear();
 
+    // 终止 GLFW 后才离开 main，全局 Breakout 随后析构；这是当前教学代码的 GPU 生命周期局限。
     glfwTerminate();
     return 0;
 }

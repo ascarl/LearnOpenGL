@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：串联 Breakout 完整玩法架构，包括资源加载、对象更新、碰撞、粒子、后处理、道具、音频与文字界面。
 // 核心流程：Init 构建长生命周期组件；Update 推进模拟并处理输赢；Render 先离屏绘制游戏，再后处理并叠加文字。
-// 生命周期：全局组件由 Game 创建和析构，ResourceManager 缓存共享 GPU 句柄，SoundEngine 在 Game 析构时归还引用。
+// 生命周期：SoundEngine 在文件作用域静态初始化、在 Game 析构时 drop；ResourceManager 缓存由 main 在有效上下文内清理。
+// 当前限制：本示例的全局 Game 在 glfwTerminate 后才析构；SpriteRenderer 的 GL 删除过晚，其余 GPU 组件又缺少析构清理，不能视为完整的资源生命周期范例。
 
 #include <algorithm>
 #include <sstream>
@@ -36,6 +37,7 @@ GameObject        *Player;
 BallObject        *Ball;
 ParticleGenerator *Particles;
 PostProcessor     *Effects;
+// 音频引擎在进入 main 之前创建；Game::Init 只用它启动背景音乐，后续碰撞分支再直接播放事件音效。
 ISoundEngine      *SoundEngine = createIrrKlangDevice();
 TextRenderer      *Text;
 

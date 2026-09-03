@@ -7,9 +7,9 @@
 ** option) any later version.
 ******************************************************************/
 // LearnOpenGL 中文导读
-// 阶段快照：第 8 阶段，实现六类道具的随机生成、拾取、持续效果、互斥后处理与延迟清理。
-// 核心流程：砖块销毁可 SpawnPowerUps；对象下落并参与 AABB 碰撞，激活后计时，结束时安全撤销效果。
-// 生命周期：Destroyed 控制实体绘制，Activated 控制效果；仅两者满足清理条件时才从 vector 移除。
+// 阶段快照：第 8 阶段，实现六类道具的随机生成与拾取，并区分即时累加效果和可撤销的定时效果。
+// 核心流程：speed 与 pad-size-increase 以 Duration 0 立即累加速度或挡板宽度；sticky、pass-through、confuse、chaos 才倒计时并处理同类重叠。
+// 生命周期：即时道具很快变为非 Activated，但增量持续到 ResetPlayer；定时道具在最后一个同类实例到期后撤销，随后才与已销毁实体一起移出 vector。
 
 #include <algorithm>
 
@@ -188,6 +188,7 @@ void Game::ResetLevel()
 
 void Game::ResetPlayer()
 {
+    // 这里恢复初始尺寸和初始球速，因此也一次性清除此前可重复叠加的挡板加宽与加速效果。
     // reset player/ball stats
     Player->Size = PLAYER_SIZE;
     Player->Position = glm::vec2(this->Width / 2.0f - PLAYER_SIZE.x / 2.0f, this->Height - PLAYER_SIZE.y);
@@ -204,7 +205,8 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
-    // 持续效果到期时先检查同类型是否仍有实例激活，避免较早拾取的道具错误关闭后来叠加的效果。
+    // Duration 为 0 的 speed/pad-size-increase 会在这次更新中转为非激活并被清理，但没有对应的反向分支，数值增量仍然保留。
+    // 四种定时效果到期时先检查同类型是否仍有实例激活，避免较早拾取的道具错误关闭后来叠加的效果。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;
@@ -280,6 +282,7 @@ void Game::SpawnPowerUps(GameObject &block)
 
 void ActivatePowerUp(PowerUp &powerUp)
 {
+    // speed 与 pad-size-increase 每次拾取都直接叠加；它们不靠 Duration 撤销，而由 ResetPlayer 恢复初始值。
     if (powerUp.Type == "speed")
     {
         Ball->Velocity *= 1.2;
