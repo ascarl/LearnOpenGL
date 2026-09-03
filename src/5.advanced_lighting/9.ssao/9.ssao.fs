@@ -52,7 +52,7 @@ void main()
         float sampleDepth = texture(gPosition, offset.xy).z; // get depth value of kernel sample
         
         // range check & accumulate
-        // smoothstep 只让视空间 z 距离落在 radius 内的表面参与，避免把远处背景误当作邻域遮挡物。
+        // smoothstep 形成连续距离权重：|Δz|<=radius 时为 1；超出 radius 后仍非零，并随 radius/|Δz| 趋近 0 而衰减到 0。
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
         occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;           
     }

@@ -1,8 +1,8 @@
 #version 330 core
 // LearnOpenGL 中文导读
-// 着色阶段：漫反射 IBL 预计算片段着色器，为每个法线方向积分环境半球辐照度。
-// 输入输出：WorldPos 定义世界空间 N，environmentMap 提供入射 radiance，输出写低分辨率 irradianceMap 当前面。
-// 核心算法：累加 L_i*cos(theta)*sin(theta)；cos 是 Lambert 投影权重，sin 是球坐标立体角雅可比，结果近似半球积分。
+// 着色阶段：漫反射 IBL 预计算片段着色器，为每个法线方向生成已含 Lambert 1/π 归一化的环境漫反射卷积。
+// 输入输出：WorldPos 定义世界空间 N，environmentMap 提供入射 radiance，输出写 irradianceMap 当前面；其值是 E/π 而非物理辐照度 E。
+// 核心算法：PI*sum/nrSamples 近似 (1/π)∫Ω Li*cosθ dω；sinθ 是球坐标雅可比，常量 Li=1 时输出约 1（物理 E 为 π）。
 out vec4 FragColor;
 in vec3 WorldPos;
 

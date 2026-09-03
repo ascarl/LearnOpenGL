@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
 // 学习目标：将几何属性写入 G-buffer，再以屏幕空间光照 Pass 高效累加大量点光源。
 // 核心流程：几何 Pass 写 gPosition、gNormal、gAlbedoSpec；光照 Pass 读取三附件；随后复制深度并正向绘制灯箱。
-// Pass 依赖：三个 G-buffer 附件均保存世界空间数据；深度 blit 让灯箱与前两 Pass 的场景深度正确遮挡。
+// Pass 依赖：gPosition/gNormal 保存世界空间位置/法线，gAlbedoSpec 保存材质反照率与镜面强度；深度 blit 让灯箱接受场景遮挡。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

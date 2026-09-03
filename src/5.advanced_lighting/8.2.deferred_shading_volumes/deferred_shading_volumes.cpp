@@ -1,6 +1,6 @@
 // LearnOpenGL 中文导读
 // 学习目标：在延迟着色中根据衰减方程求点光源有效半径，跳过光照体积外的无贡献计算。
-// 核心流程：几何 Pass 生成世界空间 G-buffer，光照 Pass 读取附件并仅在 distance < Radius 时累加该灯贡献。
+// 核心流程：几何 Pass 写入世界空间位置/法线及材质反照率/镜面强度，光照 Pass 仅在 distance < Radius 时累加该灯贡献。
 // Pass 依赖：CPU 由常数/线性/二次衰减和亮度阈值解半径；后续深度复制与灯箱 Pass 仍依赖几何深度。
 
 #include <glad/glad.h>
