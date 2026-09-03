@@ -1,6 +1,6 @@
 // LearnOpenGL 中文导读
 // 学习目标：用父子 Entity 构成场景图，让局部变换沿层级传播为每个节点的世界模型矩阵。
-// 核心流程：创建一条共享 Model 的实体链，updateSelfAndChild 递归组合父子变换，渲染时逐节点提交累计后的 model 矩阵。
+// 核心流程：创建一条共享 Model 的实体链，updateSelfAndChild 递归组合父子变换；现有渲染循环只提交仍有子节点的节点，末端叶节点不会被绘制。
 // 观察重点：只旋转根节点即可带动所有后代绕父级坐标系运动，体现局部空间、父空间和世界空间的关系。
 
 #include <glad/glad.h>
@@ -158,7 +158,8 @@ int main()
 		ourShader.setMat4("view", view);
 
 		// draw our scene graph
-		// 数据流：沿场景图读取各节点已经累计的世界矩阵，同一 Model 因不同节点变换被重复实例化绘制。
+		// 数据流：沿 children.back() 读取各节点累计的世界矩阵，同一 Model 因不同节点变换被重复实例化绘制。
+		// 现有 while 在绘制前先检查当前节点是否有 child，因此最终无子节点的叶子无法进入循环体；这是本例既有行为，并非完整的场景图遍历。
 		Entity* lastEntity = &ourEntity;
 		while (lastEntity->children.size())
 		{

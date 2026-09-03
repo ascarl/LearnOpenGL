@@ -2,6 +2,7 @@
 // 学习目标：比较关闭 Bloom、传统亮区阈值加乒乓高斯模糊，以及多尺度渐进降采样/上采样 Bloom 三条路径。
 // 核心流程：先把 HDR 场景与亮区写入两个颜色附件，再生成多级浮点 mip；由小到大加法重建辉光，最后与场景合成、曝光映射并 Gamma 校正。
 // 观察重点：Karis average 抑制首级降采样的高亮 firefly，帐篷滤波与多尺度累积产生比固定半径高斯模糊更稳定的宽域辉光。
+// 实现差异：模式 3 虽标为 unthresholded/physically based，实际仍把阈值亮区 colorBuffers[1] 送入 mip 链，而不是完整场景 colorBuffers[0]。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -53,6 +54,7 @@ struct bloomMip
 	unsigned int texture;
 };
 
+// 资源所有权：bloomFBO 不是 RAII；析构函数为空，Init 创建的 FBO 与 mip 纹理必须在 OpenGL 上下文仍有效时显式调用 Destroy。
 class bloomFBO
 {
 public:
@@ -70,6 +72,7 @@ private:
 };
 
 bloomFBO::bloomFBO() : mInit(false) {}
+// 空析构不会释放 mFBO 或 mMipChain 中的纹理。
 bloomFBO::~bloomFBO() {}
 
 bool bloomFBO::Init(unsigned int windowWidth, unsigned int windowHeight, unsigned int mipChainLength)
@@ -156,6 +159,7 @@ const std::vector<bloomMip>& bloomFBO::MipChain() const
 
 
 
+// 资源所有权：BloomRenderer 也不是 RAII；Init 在堆上创建两个 Shader 并初始化 mFBO，调用者必须在上下文销毁前显式调用 Destroy。
 class BloomRenderer
 {
 public:
@@ -182,6 +186,7 @@ private:
 };
 
 BloomRenderer::BloomRenderer() : mInit(false) {}
+// 空析构不会代替 Destroy，也不会删除两个堆 Shader 或释放 mFBO 的 GL 资源。
 BloomRenderer::~BloomRenderer() {}
 
 bool BloomRenderer::Init(unsigned int windowWidth, unsigned int windowHeight)
@@ -606,6 +611,7 @@ int main()
         {
 
 	        // 多尺度路径先逐级降采样，再以帐篷核和加法混合逐级重建到 mip 0。
+	        // 实现现状：colorBuffers[1] 来自 6.bloom.fs 的亮度阈值输出，所以此路径的输入并非真正 unthresholded。
 	        bloomRenderer.RenderBloomTexture(colorBuffers[1], bloomFilterRadius);
         }
 
@@ -639,6 +645,7 @@ int main()
         glfwPollEvents();
     }
 
+    // 两个辅助类的析构均为空；必须在 glfwTerminate 销毁 OpenGL 上下文前显式释放 FBO、mip 纹理和两个堆 Shader。
     bloomRenderer.Destroy();
     glfwTerminate();
     return 0;

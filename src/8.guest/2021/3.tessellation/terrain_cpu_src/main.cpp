@@ -115,7 +115,7 @@ int main()
     for(int i = 0; i < height; i++)
     {
 
-        // 关键步骤：每个高度图 texel 在 CPU 上直接变成一个世界空间顶点，红色通道映射到 Y 高度。
+        // 关键步骤：每个高度图 texel 在 CPU 上直接变成一个模型/局部空间顶点，首通道映射到 Y 高度；当前 model 为单位矩阵，所以数值恰好也等于世界空间坐标。
         for(int j = 0; j < width; j++)
         {
             unsigned char* pixelOffset = data + (j + width * i) * bytePerPixel;
