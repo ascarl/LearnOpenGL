@@ -1,7 +1,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：手工编译并链接顶点/片段着色器，用 VAO 与 VBO 绘制第一个三角形。
 // 核心流程：CPU 顶点数组上传到 VBO，VAO 记录属性解释方式，Shader Program 驱动 glDrawArrays。
-// 观察重点：顶点坐标已位于 NDC；渲染循环每帧绑定程序和 VAO 后提交 3 个顶点。
+// 坐标空间：顶点着色器先把输入写入裁剪空间 gl_Position；本例 w=1，透视除法后的 NDC 数值才与输入相同。
+// 观察重点：渲染循环每帧绑定程序和 VAO 后提交 3 个顶点。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

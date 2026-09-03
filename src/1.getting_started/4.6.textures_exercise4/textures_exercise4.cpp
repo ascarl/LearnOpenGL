@@ -185,6 +185,8 @@ int main()
 
         // set the texture mix value in the shader
         // 数据边界：把 CPU 端 [0,1] 权重送入片段 Shader，作为 mix 的第三个参数。
+        // 状态前提：Shader::setFloat 只用 ourShader.ID 查询 location，内部 glUniform1f 仍写入当前绑定的 Program，并不会自动切换。
+        // 可靠顺序应先调用 ourShader.use() 再 setFloat；本例仅因初始化绑定后未切换 Program 才工作，属于脆弱的隐式状态依赖。
         ourShader.setFloat("mixValue", mixValue);
 
         // render container

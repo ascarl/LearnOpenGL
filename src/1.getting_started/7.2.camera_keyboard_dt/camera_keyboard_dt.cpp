@@ -212,7 +212,8 @@ int main()
 
     // pass projection matrix to shader (as projection matrix rarely changes there's no need to do this per frame)
     // -----------------------------------------------------------------------------------------------------------
-    // 固定 Projection 在循环外上传；每帧只需随 cameraPos 更新 View，顶点 Shader 计算 P*V*M。
+    // Projection 只上传一次依赖宽高比始终等于固定的 800/600；“投影很少变化”并不涵盖窗口比例变化。
+    // 窗口允许 resize，而回调只更新 glViewport；若 framebuffer 宽高比改变却不重算此矩阵，画面会被拉伸。
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     ourShader.setMat4("projection", projection);
 

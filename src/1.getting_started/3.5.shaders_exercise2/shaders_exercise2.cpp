@@ -6,6 +6,8 @@
 // In your CPP file:
 // ======================
 float offset = 0.5f;
+// Program 状态：Shader::setFloat 只用 ourShader.ID 查询 location，内部 glUniform1f 仍写入当前绑定的 Program，并不会自动切换。
+// 可靠用法必须先调用 ourShader.use()；若承接 3.3 时恰好仍绑定同一 Program，这段才会工作，属于脆弱的隐式状态依赖。
 ourShader.setFloat("xOffset", offset);
 
 // In your vertex shader:
