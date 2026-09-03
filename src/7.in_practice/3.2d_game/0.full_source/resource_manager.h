@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：理解以字符串名称缓存 Shader 与 Texture2D 的静态资源管理器。
+// 核心流程：Load 从文件创建 GPU 对象并写入映射，Get 返回轻量句柄副本，Clear 统一删除 OpenGL 对象。
+// 生命周期：ResourceManager 本身不可实例化；Clear 必须在有效 OpenGL 上下文仍存在时调用。
+
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H
 
@@ -26,6 +31,7 @@
 class ResourceManager
 {
 public:
+    // 名称是游戏模块之间的资源契约，避免各对象重复读取文件和创建相同 GPU 资源。
     // resource storage
     static std::map<std::string, Shader>    Shaders;
     static std::map<std::string, Texture2D> Textures;

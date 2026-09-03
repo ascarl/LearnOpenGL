@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 2 阶段，完成 GLFW/OpenGL 入口、按键状态采集和 Game 驱动循环。
+// 核心流程：初始化上下文与混合，每帧计算 deltaTime 后依次输入、更新、绘制，退出前清理共享资源。
+// 职责边界：回调只写 Keys，Game 决定按键含义；平台层不直接操作未来的玩法对象。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -67,6 +72,7 @@ int main(int argc, char *argv[])
 
     while (!glfwWindowShouldClose(window))
     {
+        // 时间、输入、模拟、渲染的固定顺序构成后续所有阶段共用的主循环骨架。
         // calculate delta time
         // --------------------
         float currentFrame = glfwGetTime();

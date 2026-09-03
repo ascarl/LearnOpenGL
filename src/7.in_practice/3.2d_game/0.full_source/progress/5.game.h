@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 5 阶段，加入 BallObject、碰撞方向/差向量和关卡/玩家复位接口。
+// 学习目标：为 AABB-AABB、圆-AABB 检测及按碰撞方向修正速度和穿透深度建立数据契约。
+// 观察重点：Game 负责碰撞编排，BallObject 负责自身移动和墙面边界。
+
 #ifndef GAME_H
 #define GAME_H
 

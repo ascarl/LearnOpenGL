@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 5 阶段，实现球移动、砖块/挡板碰撞、速度反射、穿透修正与丢球后的关卡/玩家复位。
+// 核心流程：Update 先移动球再统一碰撞；圆-AABB 最近点算法返回方向和差向量供 DoCollisions 响应。
+// 观察重点：挡板命中位置改变水平速度，同时重新归一化以保持球的总速率不变。
+
 #include "game.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
@@ -150,6 +155,7 @@ Direction VectorDirection(glm::vec2 closest);
 
 void Game::DoCollisions()
 {
+    // 先处理球与所有砖块，再处理球与挡板；位置修正把球推出重叠区域，防止下一帧重复反向。
     for (GameObject &box : this->Levels[this->Level].Bricks)
     {
         if (!box.Destroyed)

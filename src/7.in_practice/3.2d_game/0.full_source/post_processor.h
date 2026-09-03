@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：理解多重采样离屏渲染、颜色 resolve 与全屏后处理三个阶段。
+// 核心流程：BeginRender 绑定 MSFBO，EndRender blit 到可采样纹理，Render 在全屏四边形上执行特效 Shader。
+// 生命周期：对象持有两个 FBO、一个多采样 RBO、resolve 纹理和屏幕 VAO；调用顺序是其正确工作的前提。
+
 #ifndef POST_PROCESSOR_H
 #define POST_PROCESSOR_H
 
@@ -42,6 +47,7 @@ public:
     void Render(float time);
 private:
     // render state
+    // MSFBO 接收多重采样场景，FBO 的单采样 Texture 才能被后处理 Shader 读取。
     unsigned int MSFBO, FBO; // MSFBO = Multisampled FBO. FBO is regular, used for blitting MS color-buffer to texture
     unsigned int RBO; // RBO is used for multisampled color buffer
     unsigned int VAO;

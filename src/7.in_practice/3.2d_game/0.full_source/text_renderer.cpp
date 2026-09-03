@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：封装 FreeType 字形预加载与游戏内动态文字绘制。
+// 核心流程：构造时准备正交投影和动态四边形；Load 缓存 GL_RED 字形纹理；RenderText 按度量逐字排版。
+// 坐标空间：游戏文字采用左上为原点、Y 轴向下的屏幕坐标，与精灵投影保持一致。
+
 #include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -18,6 +23,7 @@
 
 TextRenderer::TextRenderer(unsigned int width, unsigned int height)
 {
+    // 只分配一个字形的动态顶点空间；整段文本通过重复更新该缓冲并逐字 draw 完成。
     // load and configure shader
     this->TextShader = ResourceManager::LoadShader("text_2d.vs", "text_2d.fs", nullptr, "text");
     this->TextShader.SetMatrix4("projection", glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f), true);
@@ -49,6 +55,7 @@ void TextRenderer::Load(std::string font, unsigned int fontSize)
     // set size to load glyphs as
     FT_Set_Pixel_Sizes(face, 0, fontSize);
     // disable byte-alignment restriction
+    // 字形位图是紧密排列的单字节灰度数据，关闭默认 4 字节行对齐可避免窄字形错行。
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); 
     // then for the first 128 ASCII characters, pre-load/compile their characters and store them
     for (GLubyte c = 0; c < 128; c++) // lol see what I did there 
@@ -60,6 +67,7 @@ void TextRenderer::Load(std::string font, unsigned int fontSize)
             continue;
         }
         // generate texture
+        // 红通道保存覆盖率，文字颜色由 uniform 决定；这样同一字形纹理可用任意颜色复用。
         unsigned int texture;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -109,6 +117,7 @@ void TextRenderer::RenderText(std::string text, float x, float y, float scale, g
     {
         Character ch = Characters[*c];
 
+        // 以大写 H 的 Bearing 作为共同参考线，抵消不同字形顶部偏移，保持一行文字视觉对齐。
         float xpos = x + ch.Bearing.x * scale;
         float ypos = y + (this->Characters['H'].Bearing.y - ch.Bearing.y) * scale;
 
@@ -128,11 +137,13 @@ void TextRenderer::RenderText(std::string text, float x, float y, float scale, g
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+        // glBufferSubData 保留既有存储，仅替换当前字形的六个顶点，避免循环内重复分配。
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); // be sure to use glBufferSubData and not glBufferData
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph
+        // Advance 为 FreeType 26.6 定点值，右移 6 位转换为像素后再应用整体缩放。
         x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (1/64th times 2^6 = 64)
     }
     glBindVertexArray(0);

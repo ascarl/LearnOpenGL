@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 5.1 阶段，定义从 GameObject 派生的球，补充半径与是否黏在挡板上的状态。
+// 学习目标：把球自身运动/墙面约束封装在 BallObject，把对象间碰撞留给 Game。
+// 生命周期：Reset 恢复初始位置、速度和 Stuck，等待玩家再次发球。
+
 #ifndef BALLOBJECT_H
 #define BALLOBJECT_H
 

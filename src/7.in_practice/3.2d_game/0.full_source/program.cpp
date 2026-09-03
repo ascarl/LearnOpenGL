@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：建立 Breakout 的窗口入口与固定顺序游戏循环，把平台事件转交给 Game 状态机。
+// 核心流程：创建 OpenGL 上下文后初始化 Game，每帧按输入、更新、绘制执行，退出前释放缓存的 GPU 资源。
+// 生命周期：Game 持有玩法对象，ResourceManager 持有共享 Shader/Texture 句柄；清理必须发生在 GLFW 上下文销毁前。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -67,6 +72,7 @@ int main(int argc, char *argv[])
 
     while (!glfwWindowShouldClose(window))
     {
+        // deltaTime 让移动与模拟速度独立于帧率；事件轮询先更新按键表，再驱动本帧状态。
         // calculate delta time
         // --------------------
         float currentFrame = glfwGetTime();
@@ -101,6 +107,7 @@ int main(int argc, char *argv[])
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
+    // 回调只记录按键状态，具体玩法含义由 Game::ProcessInput 统一解释，避免平台层直接修改游戏对象。
     // when a user presses the escape key, we set the WindowShouldClose property to true, closing the application
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);

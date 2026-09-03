@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 9 阶段，在道具与视觉效果之上加入循环背景音乐和碰撞/拾取事件音效。
+// 核心流程：Game 初始化时创建并使用 irrKlang 引擎，具体碰撞分支播放短音效，析构时 drop 归还引擎引用。
+// 职责边界：音频是游戏事件的副作用，不参与碰撞计算或渲染；各事件在状态确认后才触发声音。
+
 #include <algorithm>
 
 #include <irrklang/irrKlang.h>
@@ -91,6 +96,7 @@ void Game::Init()
     glm::vec2 ballPos = playerPos + glm::vec2(PLAYER_SIZE.x / 2.0f - BALL_RADIUS, -BALL_RADIUS * 2.0f);
     Ball = new BallObject(ballPos, BALL_RADIUS, INITIAL_BALL_VELOCITY, ResourceManager::GetTexture("face"));
     // audio
+    // 背景音乐使用循环播放；砖块、挡板和道具音效则在对应碰撞事件内单次触发。
     SoundEngine->play2D("audio/breakout.mp3", true);
 }
 

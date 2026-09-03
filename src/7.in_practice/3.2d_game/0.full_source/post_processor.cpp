@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：搭建 Breakout 的 MSAA 离屏缓冲，并用卷积或坐标扰动实现混乱、反色和震动效果。
+// 核心流程：场景写入 4x MSFBO，blit resolve 到 FBO 纹理，再将该纹理绘制到默认帧缓冲的全屏四边形。
+// Render Target：第一阶段是多采样 RBO，第二阶段是单采样 Texture，最终输出为窗口默认颜色缓冲。
+
 #include "post_processor.h"
 
 #include <iostream>
@@ -13,6 +18,7 @@
 PostProcessor::PostProcessor(Shader shader, unsigned int width, unsigned int height) 
     : PostProcessingShader(shader), Texture(), Width(width), Height(height), Confuse(false), Chaos(false), Shake(false)
 {
+    // 两个 FBO 分离“高质量场景写入”和“可被 Shader 采样”两种需求，颜色 blit 完成 MSAA resolve。
     // initialize renderbuffer/framebuffer object
     glGenFramebuffers(1, &this->MSFBO);
     glGenFramebuffers(1, &this->FBO);
@@ -35,6 +41,7 @@ PostProcessor::PostProcessor(Shader shader, unsigned int width, unsigned int hei
     this->initRenderData();
     this->PostProcessingShader.SetInteger("scene", 0, true);
     float offset = 1.0f / 300.0f;
+    // 九个邻域偏移与两组 3x3 核只初始化一次，片段 Shader 根据当前效果选择边缘检测或模糊卷积。
     float offsets[9][2] = {
         { -offset,  offset  },  // top-left
         {  0.0f,    offset  },  // top-center
@@ -69,6 +76,7 @@ void PostProcessor::BeginRender()
 }
 void PostProcessor::EndRender()
 {
+    // READ/ DRAW 目标分别绑定多采样源和单采样目标，blit 把多个样本解析为可采样的一张颜色纹理。
     // now resolve multisampled color-buffer into intermediate FBO to store to texture
     glBindFramebuffer(GL_READ_FRAMEBUFFER, this->MSFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->FBO);

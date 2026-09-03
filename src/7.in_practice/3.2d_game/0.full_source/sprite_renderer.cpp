@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：实现基于单位四边形的精灵绘制，并理解二维 model 矩阵的组合顺序。
+// 核心流程：平移到目标位置，把旋转中心移到精灵中心，旋转后移回，再缩放单位四边形并采样纹理。
+// 坐标空间：CPU 使用左上为原点的像素坐标，正交 projection 将其映射到裁剪空间。
+
 #include "sprite_renderer.h"
 
 
@@ -22,6 +27,7 @@ SpriteRenderer::~SpriteRenderer()
 
 void SpriteRenderer::DrawSprite(Texture2D &texture, glm::vec2 position, glm::vec2 size, float rotate, glm::vec3 color)
 {
+    // GLM 右乘列向量，因此代码书写顺序与顶点实际经历的缩放、绕中心旋转、最终平移顺序相反。
     // prepare transformations
     this->shader.Use();
     glm::mat4 model = glm::mat4(1.0f);
@@ -48,6 +54,7 @@ void SpriteRenderer::DrawSprite(Texture2D &texture, glm::vec2 position, glm::vec
 
 void SpriteRenderer::initRenderData()
 {
+    // 所有精灵共享 0..1 单位四边形；每次绘制只更换 uniform 与纹理，无需重建几何数据。
     // configure VAO/VBO
     unsigned int VBO;
     float vertices[] = { 

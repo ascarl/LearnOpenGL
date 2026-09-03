@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：实现 GLSL 各阶段编译、program 链接、错误日志与类型安全的 uniform 辅助接口。
+// 核心流程：分别编译顶点/片段及可选几何着色器，附加并链接后删除阶段对象；program 保留已链接机器码。
+// 观察重点：Set* 默认假设目标 program 已 Use；useShader=true 可在上传前主动切换当前 program。
+
 #include "shader.h"
 
 #include <iostream>
@@ -18,6 +23,7 @@ Shader &Shader::Use()
 
 void Shader::Compile(const char* vertexSource, const char* fragmentSource, const char* geometrySource)
 {
+    // 阶段对象只服务于链接；链接完成后即可删除，最终渲染使用的是 this->ID 指向的 program。
     unsigned int sVertex, sFragment, gShader;
     // vertex Shader
     sVertex = glCreateShader(GL_VERTEX_SHADER);
@@ -110,6 +116,7 @@ void Shader::SetMatrix4(const char *name, const glm::mat4 &matrix, bool useShade
 
 void Shader::checkCompileErrors(unsigned int object, std::string type)
 {
+    // shader 与 program 使用不同的状态/日志查询 API，因此通过 type 分支分别读取编译或链接结果。
     int success;
     char infoLog[1024];
     if (type != "PROGRAM")

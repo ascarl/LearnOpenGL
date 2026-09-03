@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：认识 2D 游戏实体的最小公共状态，以及数据对象与渲染器之间的分工。
+// 核心流程：GameObject 保存位置、尺寸、速度、颜色和状态，Draw 把这些参数交给 SpriteRenderer。
+// 所有权：Sprite 复制的是共享 Texture2D 句柄，纹理实际生命周期由 ResourceManager 统一管理。
+
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 

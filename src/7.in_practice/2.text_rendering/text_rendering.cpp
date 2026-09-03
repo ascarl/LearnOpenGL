@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 FreeType 栅格化字形，将单通道位图缓存为纹理，并按字符度量动态拼出文本四边形。
+// 核心流程：预加载 ASCII 字形纹理与 Size/Bearing/Advance，渲染时逐字符更新动态 VBO 并开启 Alpha 混合。
+// 观察重点：投影与字形位置使用屏幕像素坐标；Bearing 决定基线对齐，Advance 使用 1/64 像素定点单位。
+
 #include <iostream>
 #include <map>
 #include <string>
@@ -32,6 +37,7 @@ struct Character {
 };
 
 std::map<GLchar, Character> Characters;
+// 所有字符复用同一 VAO/VBO；变化的是每个字形的六个顶点和当前绑定的字形纹理。
 unsigned int VAO, VBO;
 
 int main()
@@ -109,6 +115,7 @@ int main()
         FT_Set_Pixel_Sizes(face, 0, 48);
 
         // disable byte-alignment restriction
+        // FreeType 灰度位图每像素一个字节，行宽未必是 4 的倍数，因此取消 OpenGL 默认的四字节解包对齐。
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         // load first 128 characters of ASCII set
@@ -121,6 +128,7 @@ int main()
                 continue;
             }
             // generate texture
+            // GL_RED 只保存覆盖率；片段着色器把红通道解释为文字 Alpha，颜色由 uniform 单独控制。
             unsigned int texture;
             glGenTextures(1, &texture);
             glBindTexture(GL_TEXTURE_2D, texture);
@@ -162,6 +170,7 @@ int main()
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // 顶点缓冲只预留一个字形的容量，GL_DYNAMIC_DRAW 表明内容会在绘制字符串时频繁改写。
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
@@ -228,6 +237,7 @@ void RenderText(Shader &shader, std::string text, float x, float y, float scale,
     {
         Character ch = Characters[*c];
 
+        // Bearing 把位图左上角换算到共同基线；Size 决定当前字形四边形的宽高。
         float xpos = x + ch.Bearing.x * scale;
         float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
 
@@ -247,12 +257,14 @@ void RenderText(Shader &shader, std::string text, float x, float y, float scale,
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // 只替换已有存储中的顶点数据，避免每个字符都重新分配缓冲区。
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); // be sure to use glBufferSubData and not glBufferData
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+        // FreeType 的 26.6 定点 Advance 右移 6 位后才是像素距离。
         x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
     }
     glBindVertexArray(0);

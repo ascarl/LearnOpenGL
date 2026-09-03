@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：比较 glGetError 主动轮询与调试上下文回调两种 OpenGL 诊断方式。
+// 核心流程：请求调试上下文、注册同步回调，再通过一次故意的非法纹理调用观察错误来源、类型与严重级别。
+// 观察重点：调试消息只在驱动提供调试上下文时启用；发布构建通常应关闭同步输出并过滤通知类消息。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -21,6 +26,7 @@ const unsigned int SCR_HEIGHT = 600;
 
 GLenum glCheckError_(const char *file, int line)
 {
+    // glGetError 会逐个取走错误标志，因此循环读取直到 GL_NO_ERROR 才能完整报告同一段代码产生的错误。
     GLenum errorCode;
     while ((errorCode = glGetError()) != GL_NO_ERROR)
     {
@@ -49,6 +55,7 @@ void APIENTRY glDebugOutput(GLenum source,
                             const char *message, 
                             const void *userParam)
 {
+    // 回调由驱动推送消息；ID 适合屏蔽已知噪声，source/type/severity 则帮助判断责任边界和处理优先级。
     if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return; // ignore these non-significant error codes
 
     std::cout << "---------------" << std::endl;
@@ -128,6 +135,7 @@ int main()
     int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
     {
+        // 同步模式让回调在触发 OpenGL 调用的线程内立即执行，便于断点定位，但会增加运行时开销。
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // makes sure errors are displayed synchronously
         glDebugMessageCallback(glDebugOutput, nullptr);
@@ -210,6 +218,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/wood.png").c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
+        // 教学故意把目标写成 GL_FRAMEBUFFER；glTexImage2D 只接受纹理目标，用它触发可定位的 GL_INVALID_ENUM。
         glTexImage2D(GL_FRAMEBUFFER, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：理解 Game 如何作为 2D 游戏总协调器，集中管理状态机、输入、关卡、生命与道具集合。
+// 核心流程：Init 建立资源和对象，随后每帧依次 ProcessInput、Update、Render，并在重置时恢复关卡与玩家状态。
+// 职责边界：Game 编排生命周期与碰撞规则；资源缓存、精灵绘制、粒子、后处理、文字和音频由专门组件完成。
+
 #ifndef GAME_H
 #define GAME_H
 #include <vector>
@@ -33,6 +38,7 @@ enum Direction {
 };
 // Defines a Collision typedef that represents collision data
 typedef std::tuple<bool, Direction, glm::vec2> Collision; // <collision?, what direction?, difference vector center - closest point>
+// Collision 同时携带是否命中、碰撞法向的离散方向和圆心到最近点的差向量，供速度反射与穿透修正使用。
 
 // Initial size of the player paddle
 const glm::vec2 PLAYER_SIZE(100.0f, 20.0f);

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：理解固定容量 CPU 粒子池如何复用失效粒子，并用共享四边形逐个绘制透明轨迹。
+// 核心流程：Update 复活少量粒子并推进全部存活粒子，Draw 上传每粒子的偏移/颜色后使用加法混合。
+// 生命周期：Particle 的 Life 决定槽位是否可复用；生成器持有池、共享纹理/Shader 句柄和一个 VAO。
+
 #ifndef PARTICLE_GENERATOR_H
 #define PARTICLE_GENERATOR_H
 #include <vector>

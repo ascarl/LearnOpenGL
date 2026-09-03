@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：把共享单位四边形转换为任意位置、尺寸、旋转和颜色的 2D 精灵。
+// 核心流程：构造时建立 VAO/VBO，DrawSprite 设置 model 与颜色、绑定纹理并绘制六个顶点。
+// 生命周期：渲染器拥有 quadVAO 并在析构时删除；Shader/Texture 句柄由 ResourceManager 管理。
+
 #ifndef SPRITE_RENDERER_H
 #define SPRITE_RENDERER_H
 

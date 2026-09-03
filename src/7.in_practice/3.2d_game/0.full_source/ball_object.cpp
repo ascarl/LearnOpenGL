@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：实现球的帧率无关移动、墙面反弹和复位生命周期。
+// 核心流程：未黏在挡板上时以 Velocity * dt 积分；越过左、右、上边界后翻转对应速度并修正穿透位置。
+// 观察重点：底边不在此处反弹，它由 Game 判定丢失生命并触发关卡/玩家复位。
+
 #include "ball_object.h"
 
 
@@ -17,6 +22,7 @@ BallObject::BallObject(glm::vec2 pos, float radius, glm::vec2 velocity, Texture2
 
 glm::vec2 BallObject::Move(float dt, unsigned int window_width)
 {
+    // 反弹后同时把位置夹回合法边界，避免大 dt 造成持续留在墙外并重复翻转速度。
     // if not stuck to player board
     if (!this->Stuck)
     {

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 7 阶段，引入离屏后处理，把完整场景 resolve 为纹理后应用震动等屏幕效果。
+// 核心流程：BeginRender 绑定多采样 FBO，绘制场景后 EndRender resolve，Render 再输出全屏四边形。
+// 观察重点：实心砖块碰撞短暂开启 Shake，计时归零后由 Update 关闭，效果生命周期与渲染 Pass 解耦。
+
 #include "game.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
@@ -136,6 +141,7 @@ void Game::Render()
     if(this->State == GAME_ACTIVE)
     {
         // begin rendering to postprocessing framebuffer
+        // 场景的所有精灵和粒子必须位于 Begin/End 之间，才能统一进入后处理输入纹理。
         Effects->BeginRender();
             // draw background
             Renderer->DrawSprite(ResourceManager::GetTexture("background"), glm::vec2(0.0f, 0.0f), glm::vec2(this->Width, this->Height), 0.0f);

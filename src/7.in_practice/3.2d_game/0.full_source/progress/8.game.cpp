@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 8 阶段，实现六类道具的随机生成、拾取、持续效果、互斥后处理与延迟清理。
+// 核心流程：砖块销毁可 SpawnPowerUps；对象下落并参与 AABB 碰撞，激活后计时，结束时安全撤销效果。
+// 生命周期：Destroyed 控制实体绘制，Activated 控制效果；仅两者满足清理条件时才从 vector 移除。
+
 #include <algorithm>
 
 #include "game.h"
@@ -199,6 +204,7 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
+    // 持续效果到期时先检查同类型是否仍有实例激活，避免较早拾取的道具错误关闭后来叠加的效果。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;

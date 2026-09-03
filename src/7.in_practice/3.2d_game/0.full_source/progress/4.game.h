@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 4 阶段，在 Game 中加入关卡集合、当前关卡索引和玩家挡板参数。
+// 学习目标：让 Game 管理关卡/玩家生命周期，并通过 deltaTime 驱动挡板移动。
+// 观察重点：本阶段尚未加入球与碰撞，Update 仍无模拟内容。
+
 #ifndef GAME_H
 #define GAME_H
 

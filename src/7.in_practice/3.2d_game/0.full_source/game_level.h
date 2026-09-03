@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：把文本关卡网格转换为可绘制、可销毁的砖块对象集合。
+// 核心流程：Load 读取整数网格，init 按关卡尺寸计算单元格位置与颜色，Draw 跳过已销毁砖块。
+// 生命周期：每次重新加载先清空 Bricks；IsCompleted 只要求所有非实心砖块被销毁。
+
 #ifndef GAMELEVEL_H
 #define GAMELEVEL_H
 #include <vector>

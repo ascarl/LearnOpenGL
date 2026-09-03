@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：把独立文字示例封装为可复用 TextRenderer，供游戏 HUD、菜单和胜利界面调用。
+// 核心流程：Load 预编译字体字形纹理与度量，RenderText 逐字符改写动态 VBO 并绘制透明四边形。
+// 生命周期：Characters 缓存当前字体的 ASCII 字形；再次 Load 会替换映射，VAO/VBO 在渲染器实例内复用。
+
 #ifndef TEXT_RENDERER_H
 #define TEXT_RENDERER_H
 
@@ -20,6 +25,7 @@
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
+    // Size/Bearing 用于相对基线放置位图，Advance 决定下一个字符原点，TextureID 保存单通道覆盖率。
     unsigned int TextureID; // ID handle of the glyph texture
     glm::ivec2   Size;      // size of glyph
     glm::ivec2   Bearing;   // offset from baseline to left/top of glyph

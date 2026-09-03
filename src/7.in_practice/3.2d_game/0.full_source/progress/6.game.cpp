@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 6 阶段，在碰撞玩法上加入固定容量粒子池，形成跟随球运动的尾迹。
+// 核心流程：Init 建立粒子 Shader/纹理/生成器，Update 每帧重生并衰减粒子，Render 在球之前绘制尾迹。
+// 状态边界：ParticleGenerator 独立管理粒子生命周期，并在加法绘制后恢复普通 Alpha 混合。
+
 #include "game.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
@@ -79,6 +84,7 @@ void Game::Update(float dt)
      // check for collisions
     this->DoCollisions();
     // update particles
+    // 以球为发射源，每帧补充两个粒子；固定池避免游戏循环中频繁创建 GPU/堆资源。
     Particles->Update(dt, *Ball, 2, glm::vec2(Ball->Radius / 2.0f));
     // check loss condition
     if (Ball->Position.y >= this->Height) // did ball reach bottom edge?

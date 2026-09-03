@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：在通用 GameObject 上增加圆形碰撞半径、跟随挡板状态和道具效果状态。
+// 核心流程：Move 用速度和 deltaTime 推进位置并处理三侧墙反弹，Reset 恢复球与道具相关标记。
+// 职责边界：BallObject 只处理移动和边界；与砖块/挡板的检测及响应由 Game::DoCollisions 编排。
+
 #ifndef BALLOBJECT_H
 #define BALLOBJECT_H
 

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：理解磁盘关卡数据如何映射成屏幕上等尺寸的 GameObject 砖块。
+// 核心流程：逐行解析 tile code，按网格行列换算像素位置；1 创建不可摧毁砖块，2 至 5 选择普通砖块颜色。
+// 数据流：关卡文件只描述类型，纹理由 ResourceManager 共享，最终绘制委托给 SpriteRenderer。
+
 #include "game_level.h"
 
 #include <fstream>
@@ -54,6 +59,7 @@ bool GameLevel::IsCompleted()
 
 void GameLevel::init(std::vector<std::vector<unsigned int>> tileData, unsigned int levelWidth, unsigned int levelHeight)
 {
+    // 用目标关卡区域除以网格行列数，使文本中的每个单元稳定映射到一个屏幕空间矩形。
     // calculate dimensions
     unsigned int height = tileData.size();
     unsigned int width = tileData[0].size(); // note we can index vector at [0] since this function is only called if height > 0

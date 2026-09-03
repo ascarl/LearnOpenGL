@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 4 阶段，加载砖块关卡并创建可由 A/D 控制的玩家挡板。
+// 核心流程：资源就绪后解析四份关卡数据、实例化 Player，渲染顺序为背景、砖块、挡板。
+// 数据流：按键表乘 deltaTime 得到像素位移，并在更新 Position 前检查左右窗口边界。
+
 #include "game.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
@@ -45,6 +50,7 @@ void Game::Init()
     ResourceManager::LoadTexture("textures/block_solid.png", false, "block_solid");
     ResourceManager::LoadTexture("textures/paddle.png", true, "paddle");
     // load levels
+    // 文本关卡在加载时转换为 GameObject 砖块，后续每帧只遍历内存中的对象集合。
     GameLevel one; one.Load("levels/one.lvl", this->Width, this->Height / 2);
     GameLevel two; two.Load("levels/two.lvl", this->Width, this->Height / 2);
     GameLevel three; three.Load("levels/three.lvl", this->Width, this->Height / 2);

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：串联 Breakout 完整玩法架构，包括资源加载、对象更新、碰撞、粒子、后处理、道具、音频与文字界面。
+// 核心流程：Init 构建长生命周期组件；Update 推进模拟并处理输赢；Render 先离屏绘制游戏，再后处理并叠加文字。
+// 生命周期：全局组件由 Game 创建和析构，ResourceManager 缓存共享 GPU 句柄，SoundEngine 在 Game 析构时归还引用。
+
 #include <algorithm>
 #include <sstream>
 #include <iostream>
@@ -56,6 +61,7 @@ Game::~Game()
 
 void Game::Init()
 {
+    // 初始化顺序体现依赖链：先缓存 Shader/Texture，再用它们创建渲染器，最后加载关卡并实例化玩家与球。
     // load shaders
     ResourceManager::LoadShader("sprite.vs", "sprite.fs", nullptr, "sprite");
     ResourceManager::LoadShader("particle.vs", "particle.fs", nullptr, "particle");
@@ -106,6 +112,7 @@ void Game::Init()
 
 void Game::Update(float dt)
 {
+    // 模拟阶段不直接绘制：依次推进球、解决碰撞、更新粒子/道具，并根据位置和关卡状态切换生命周期。
     // update objects
     Ball->Move(dt, this->Width);
     // check for collisions
@@ -208,6 +215,7 @@ void Game::Render()
 {
     if (this->State == GAME_ACTIVE || this->State == GAME_MENU || this->State == GAME_WIN)
     {
+        // 游戏画面写入多重采样离屏缓冲，resolve 后在屏幕四边形上应用特效；HUD 文字随后绘制，不受特效影响。
         // begin rendering to postprocessing framebuffer
         Effects->BeginRender();
             // draw background
@@ -278,6 +286,7 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
+    // 道具对象经历下落、拾取激活、持续时间倒计时和延迟移除；同类效果叠加时只在最后一个到期后复原。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;
@@ -404,6 +413,7 @@ Direction VectorDirection(glm::vec2 closest);
 
 void Game::DoCollisions()
 {
+    // 同一阶段处理球-砖块、挡板-道具和球-挡板三类命中，并同步触发销毁、声音、特效与速度修正。
     for (GameObject &box : this->Levels[this->Level].Bricks)
     {
         if (!box.Destroyed)
@@ -511,6 +521,7 @@ bool CheckCollision(GameObject &one, GameObject &two) // AABB - AABB collision
 
 Collision CheckCollision(BallObject &one, GameObject &two) // AABB - Circle collision
 {
+    // 把圆心到矩形中心的向量钳制到半尺寸范围，得到矩形上距圆心最近的点，再与半径比较。
     // get center point circle first 
     glm::vec2 center(one.Position + one.Radius);
     // calculate AABB info (center, half-extents)
@@ -533,6 +544,7 @@ Collision CheckCollision(BallObject &one, GameObject &two) // AABB - Circle coll
 // calculates which direction a vector is facing (N,E,S or W)
 Direction VectorDirection(glm::vec2 target)
 {
+    // 与四个单位罗盘向量做点积，最大值对应碰撞差向量最接近的方向。
     glm::vec2 compass[] = {
         glm::vec2(0.0f, 1.0f),	// up
         glm::vec2(1.0f, 0.0f),	// right

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：实现 Texture2D 的 GPU 存储分配、采样状态配置和绑定。
+// 核心流程：Generate 记录尺寸，把 CPU 像素上传到 mip 级别 0，并将对象的环绕/过滤配置写入纹理状态。
+// 观察重点：Internal_Format 控制 GPU 存储，Image_Format 描述输入数据；带透明通道的资源需要二者均设为 RGBA。
+
 #include <iostream>
 
 #include "texture.h"
@@ -19,6 +24,7 @@ Texture2D::Texture2D()
 
 void Texture2D::Generate(unsigned int width, unsigned int height, unsigned char* data)
 {
+    // 先绑定自身 ID，后续图像和采样参数调用才会写入同一个纹理对象。
     this->Width = width;
     this->Height = height;
     // create Texture

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：实现固定粒子池的生成、更新、复用和带发光感的透明绘制。
+// 核心流程：从上次命中位置寻找死亡槽位，围绕球随机重生；每帧减少 Life/Alpha 并绘制存活粒子。
+// 渲染边界：粒子使用加法混合，Draw 结束前恢复普通 Alpha 混合，避免污染后续精灵和文字。
+
 #include "particle_generator.h"
 
 ParticleGenerator::ParticleGenerator(Shader shader, Texture2D texture, unsigned int amount)
@@ -16,6 +21,7 @@ ParticleGenerator::ParticleGenerator(Shader shader, Texture2D texture, unsigned 
 
 void ParticleGenerator::Update(float dt, GameObject &object, unsigned int newParticles, glm::vec2 offset)
 {
+    // 先补充本帧新粒子，再统一推进整个池；失效粒子保留在 vector 中等待复用而不频繁分配内存。
     // add new particles 
     for (unsigned int i = 0; i < newParticles; ++i)
     {
@@ -38,6 +44,7 @@ void ParticleGenerator::Update(float dt, GameObject &object, unsigned int newPar
 // render all particles
 void ParticleGenerator::Draw()
 {
+    // SRC_ALPHA + ONE 会把粒子颜色累加到背景，重叠区域更亮，形成尾迹的发光观感。
     // use additive blending to give it a 'glow' effect
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     this->shader.Use();
@@ -90,6 +97,7 @@ void ParticleGenerator::init()
 unsigned int lastUsedParticle = 0;
 unsigned int ParticleGenerator::firstUnusedParticle()
 {
+    // 环形查找从最近复用位置开始；若容量耗尽则覆盖第 0 个槽位，保持池大小恒定。
     // first search from last used particle, this will usually return almost instantly
     for (unsigned int i = lastUsedParticle; i < this->amount; ++i){
         if (this->particles[i].Life <= 0.0f){

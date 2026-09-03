@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：用继承复用 GameObject 的移动和绘制状态，并补充道具类型、持续时间与激活状态。
+// 核心流程：砖块销毁时创建并向下移动；挡板拾取后由 Game 激活效果、倒计时并在到期后撤销。
+// 生命周期：Destroyed 表示屏幕实体不可再绘制，Activated 表示效果仍有效；两者同时满足清理条件后才移出容器。
+
 #ifndef POWER_UP_H
 #define POWER_UP_H
 #include <string>

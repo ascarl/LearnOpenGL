@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：后处理顶点着色器，直接输出全屏四边形并按效果修改采样坐标或屏幕位置。
+// 输入输出：vertex 包含 NDC 位置与场景纹理坐标，time/chaos/confuse/shake 控制动画，TexCoords 传给片段阶段。
+// 核心算法：chaos 周期偏移纹理坐标，confuse 翻转 UV，shake 对裁剪空间位置施加微小时间振荡。
+
 layout (location = 0) in vec4 vertex; // <vec2 position, vec2 texCoords>
 
 out vec2 TexCoords;

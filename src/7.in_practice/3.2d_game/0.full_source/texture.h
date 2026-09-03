@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：封装二维纹理句柄、像素格式和采样参数，向其他游戏模块提供统一绑定接口。
+// 核心流程：构造时创建 texture ID，Generate 上传图像并设置环绕/过滤，Bind 绑定到当前活动纹理单元。
+// 生命周期：Texture2D 是可复制的句柄包装；实际删除由 ResourceManager::Clear 集中执行。
+
 #ifndef TEXTURE_H
 #define TEXTURE_H
 

@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 学习目标：用轻量 Shader 包装器集中管理 program ID、阶段编译链接和常用 uniform 上传。
+// 核心流程：Compile 接收内存源码并创建 program，Use 绑定 program，Set* 在当前 program 上写入 uniform。
+// 生命周期：该类不自动删除 program；ResourceManager::Clear 统一释放缓存中的底层 OpenGL 对象。
+
 #ifndef SHADER_H
 #define SHADER_H
 

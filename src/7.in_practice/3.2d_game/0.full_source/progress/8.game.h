@@ -6,6 +6,11 @@
 ** Creative Commons, either version 4 of the License, or (at your
 ** option) any later version.
 ******************************************************************/
+// LearnOpenGL 中文导读
+// 阶段快照：第 8 阶段，在 Game 状态中加入 PowerUps 集合与生成、更新接口。
+// 学习目标：建模道具从砖块掉落、挡板拾取、效果激活、倒计时到清理的完整生命周期。
+// 观察重点：同类持续效果可以重叠，撤销时必须确认没有其他同类道具仍处于激活状态。
+
 #ifndef GAME_H
 #define GAME_H
 
