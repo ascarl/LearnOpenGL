@@ -181,7 +181,8 @@ private:
 
 	void ExtractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh, const aiScene* scene)
 	{
-		// offset 将模型空间绑定姿势顶点带到骨骼空间；ID 同时写入受该骨骼影响的顶点。
+		// Assimp mOffsetMatrix 把 mesh space 的绑定姿势顶点变换到 bind-pose bone space；ID 同时写入受该骨骼影响的顶点。
+		// 本加载器未应用承载 mesh 的 aiNode 变换，后续蒙皮依赖该 mesh space 与动画根层级空间兼容。
 		auto& boneInfoMap = m_BoneInfoMap;
 		int& boneCount = m_BoneCounter;
 
@@ -262,7 +263,8 @@ private:
     // the required info is returned as a Texture struct.
     vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
     {
-		// 在单个 Model 内按材质相对路径去重；各 Mesh 保存相同 OpenGL 纹理 ID 的副本。
+		// 单个 Model 内只按材质相对路径去重；命中时复制整个旧 Texture，包括首次加载时的 type。
+		// 当前资源未触发跨材质角色复用；若发生，同一路径后续角色仍沿用旧 type，Mesh::Draw 会拼出旧 sampler 名。
         vector<Texture> textures;
         for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {

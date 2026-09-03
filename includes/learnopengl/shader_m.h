@@ -1,5 +1,5 @@
 // LearnOpenGL 中文导读
-// 职责：创建仅含顶点和片段阶段的 Shader program，并提供 vec/mat 在内的完整 uniform setter 集合。
+// 职责：创建仅含顶点和片段阶段的 Shader program，并提供常用标量及 GLM vec/mat uniform setter。
 // 调用边界：构造前要求 OpenGL 上下文与 GLAD 有效；调用方必须先 use()，set* 不会自动绑定 program。
 // 生命周期：链接后对顶点和片段阶段调用 glDeleteShader；对象仍附着于 program 时只会标记待删除，待 detach 或 program 删除后才真正释放；本类不 glDeleteProgram。
 // 变体边界：相较 shader_s 增加 GLM 向量/矩阵 setter；相较 shader.h 不接受几何阶段，use() 可在 const 对象上调用。

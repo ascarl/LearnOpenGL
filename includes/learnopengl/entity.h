@@ -165,7 +165,7 @@ struct Frustum
 
 struct BoundingVolume
 {
-	// 派生包围体负责先转换到世界空间，再对六个平面执行保守的“在前方或相交”测试。
+	// 派生包围体先转换到世界空间再测试六个平面；是否保守取决于具体估计，Sphere 的尺度估计仅在无剪切/变换轴正交时保证保守。
 	virtual bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const = 0;
 
 	virtual bool isOnOrForwardPlane(const Plane& plane) const = 0;
@@ -197,7 +197,8 @@ struct Sphere : public BoundingVolume
 
 	bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const final
 	{
-		// generateSphereBV 以完整对角线存 radius，故这里乘 0.5 还原半径；再取最大轴尺度处理非均匀缩放。
+		// generateSphereBV 以完整对角线存 radius，此处乘 0.5 还原半径；最大列长度仅在无剪切/轴正交时保证覆盖实际尺度。
+		// 父非均匀缩放叠加子旋转可产生 shear，此值可能小于最大奇异值，使球偏小并误剔除；默认 AABB 路径不受此特定问题影响。
 		//Get global scale thanks to our transform
 		const glm::vec3 globalScale = transform.getGlobalScale();
 
@@ -382,7 +383,8 @@ AABB generateAABB(const Model& model)
 
 Sphere generateSphereBV(const Model& model)
 {
-	// 先求模型空间 AABB，再以中心和包围盒对角线长度构造球；Sphere 世界变换处会再乘 0.5。
+	// 先求模型空间 AABB，再以中心和对角线长度构造球；Sphere 世界变换处乘 0.5 还原半径。
+	// 与 generateAABB 相同，max 以 numeric_limits<float>::min() 初始化会误算全负坐标；空 Model 也没有可生成的有效边界。
 	glm::vec3 minAABB = glm::vec3(std::numeric_limits<float>::max());
 	glm::vec3 maxAABB = glm::vec3(std::numeric_limits<float>::min());
 	for (auto&& mesh : model.meshes)

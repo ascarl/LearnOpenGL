@@ -33,12 +33,14 @@ public:
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(animationPath, aiProcess_Triangulate);
 		assert(scene && scene->mRootNode);
+		// 输入边界：这里只 assert scene/root，未检查 mNumAnimations > 0 就读取 mAnimations[0]；Release 中 assert 不提供保护。
 		auto animation = scene->mAnimations[0];
+		// aiAnimation 的 duration/ticksPerSecond 均为 double，这里分别缩窄为 float/int；ticksPerSecond 为 0 表示未提供，本实现没有 fallback。
 		m_Duration = animation->mDuration;
 		m_TicksPerSecond = animation->mTicksPerSecond;
 		aiMatrix4x4 globalTransformation = scene->mRootNode->mTransformation;
 		globalTransformation = globalTransformation.Inverse();
-		// 当前实现没有保存或使用上述逆根变换；最终骨骼矩阵实际由 Animator 的层级全局矩阵乘 offset 得到。
+		// 当前实现计算了 inverse root 却未保存或应用；Animator 的最终矩阵因此没有常见的根空间校正，并依赖后续空间兼容假设。
 		ReadHierarchyData(m_RootNode, scene->mRootNode);
 		ReadMissingBones(animation, *model);
 	}

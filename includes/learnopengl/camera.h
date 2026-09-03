@@ -94,7 +94,7 @@ public:
         Yaw   += xoffset;
         Pitch += yoffset;
 
-		// 限制在正负 89 度，避免 Front 与 WorldUp 共线导致叉积基向量退化。
+		// 正负 89 度仅在默认 Y-up 下可避免 Front 与 WorldUp 共线；构造允许任意 WorldUp，此限制不保证自定义上方向时基向量不退化。
         // make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrainPitch)
         {

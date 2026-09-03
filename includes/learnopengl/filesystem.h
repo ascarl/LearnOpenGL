@@ -25,7 +25,7 @@ public:
 private:
   static std::string const & getRoot()
   {
-	// root_directory.h 由 CMake 写入源码根目录；环境变量可覆盖该配置时路径。
+	// root_directory.h 由 CMake 写入源码根目录；存在的环境变量会覆盖该编译期路径。
     static char const * envRoot = getenv("LOGL_ROOT_PATH");
     static char const * givenRoot = (envRoot != nullptr ? envRoot : logl_root);
     static std::string root = (givenRoot != nullptr ? givenRoot : "");
@@ -48,7 +48,7 @@ private:
 
   static std::string getPathRelativeBinary(const std::string& path)
   {
-	// 兜底路径依赖启动时工作目录层级，IDE 或自定义输出目录下可能不成立。
+	// 返回的 ../../../ 路径在实际打开文件时相对进程当时的当前工作目录解析，未必等于启动时目录。
     return "../../../" + path;
   }
 

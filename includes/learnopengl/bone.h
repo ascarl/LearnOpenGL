@@ -94,7 +94,8 @@ public:
 
 	int GetPositionIndex(float animationTime)
 	{
-		// 查找包围当前时间的关键帧区间；找不到时会 assert，因此依赖输入时间落在关键帧覆盖范围内。
+		// 三个 Get*Index 都要求当前时间落入相邻关键帧区间；未命中时 assert 只在 Debug 阻止继续。
+		// Release 移除 assert 后会走到非 void 函数末尾且没有返回值，属于未定义行为。
 		for (int index = 0; index < m_NumPositions - 1; ++index)
 		{
 			if (animationTime < m_Positions[index + 1].timeStamp)
@@ -105,6 +106,7 @@ public:
 
 	int GetRotationIndex(float animationTime)
 	{
+		// 与位置轨道相同，未命中区间时 Release 会走到末尾无返回并产生未定义行为。
 		for (int index = 0; index < m_NumRotations - 1; ++index)
 		{
 			if (animationTime < m_Rotations[index + 1].timeStamp)
@@ -115,6 +117,7 @@ public:
 
 	int GetScaleIndex(float animationTime)
 	{
+		// 与位置轨道相同，未命中区间时 Release 会走到末尾无返回并产生未定义行为。
 		for (int index = 0; index < m_NumScalings - 1; ++index)
 		{
 			if (animationTime < m_Scales[index + 1].timeStamp)

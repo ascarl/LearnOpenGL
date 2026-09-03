@@ -32,7 +32,8 @@ public:
 		m_DeltaTime = dt;
 		if (m_CurrentAnimation)
 		{
-			// dt 使用秒；乘 ticks-per-second 后进入 Assimp 关键帧使用的 tick 时间域，并按时长循环。
+			// dt 使用秒；乘 ticks-per-second 后进入 Assimp 的 tick 时间域；tick 率为 0 时乘积为 0，时间不会推进。
+			// 输入前提：duration 必须非 0；当前直接执行 fmod(currentTime, duration)，没有保护 0 时长。
 			m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * dt;
 			m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
 			CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), glm::mat4(1.0f));
@@ -60,7 +61,7 @@ public:
 			nodeTransform = Bone->GetLocalTransform();
 		}
 
-		// 父全局矩阵左乘局部矩阵，把节点变换累积到模型空间。
+		// 父层级矩阵左乘局部矩阵，把节点变换累积到当前动画根层级坐标。
 		glm::mat4 globalTransformation = parentTransform * nodeTransform;
 
 		auto boneInfoMap = m_CurrentAnimation->GetBoneIDMap();
@@ -68,7 +69,8 @@ public:
 		{
 			int index = boneInfoMap[nodeName].id;
 			glm::mat4 offset = boneInfoMap[nodeName].offset;
-			// offset 先把绑定姿势顶点带到骨骼局部空间，再由当前层级变换带回动画后的模型空间。
+			// offset 从 mesh space 的绑定姿势顶点进入 bind-pose bone space；globalTransformation * offset 产生当前动画根层级坐标下的蒙皮变换。
+			// Model 未应用 mesh node transform，Animation 也未应用 inverse root；结果依赖网格顶点空间与动画根层级空间兼容的输入假设。
 			m_FinalBoneMatrices[index] = globalTransformation * offset;
 		}
 

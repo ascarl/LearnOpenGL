@@ -37,7 +37,7 @@ struct Vertex {
 };
 
 struct Texture {
-	// id 由 Model 的加载/缓存流程创建；type 决定 Draw 时拼出的 sampler 名称，path 用于去重。
+	// id 由 Model 创建；type 决定 Draw 拼出的 sampler，path 用于缓存去重；缓存命中可能保留首次角色的 type，Draw 不会按当前角色纠正。
     unsigned int id;
     string type;
     string path;
@@ -66,7 +66,7 @@ public:
     // render the mesh
     void Draw(Shader &shader) 
     {
-		// 依次占用纹理单元，并遵循 texture_diffuseN、texture_specularN 等 Shader 命名契约。
+		// 依次占用纹理单元并遵循 texture_diffuseN 等命名契约；纹理数量未与硬件可用 texture unit 上限校验。
         // bind appropriate textures
         unsigned int diffuseNr  = 1;
         unsigned int specularNr = 1;
@@ -95,7 +95,7 @@ public:
         }
         
         // draw mesh
-		// EBO 绑定记录在 VAO 中，DrawElements 按 indices 数量提交三角形。
+		// EBO 绑定记录在 VAO 中，DrawElements 按 indices 数量提交三角形；绘制后 VAO 强制设为 0，不恢复调用前的 VAO。
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -112,7 +112,7 @@ private:
     // initializes all the buffer objects/arrays
     void setupMesh()
     {
-		// VAO 记录属性格式与 EBO 关联；VBO/EBO 保存构造时 CPU vector 的快照。
+		// VAO 记录属性格式与 EBO 关联；VBO/EBO 保存 CPU vector 快照；结束时只解绑 VAO，GL_ARRAY_BUFFER 仍绑定本 Mesh 的 VBO。
         // create buffers/arrays
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);

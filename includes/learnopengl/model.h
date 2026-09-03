@@ -185,7 +185,8 @@ private:
     // the required info is returned as a Texture struct.
     vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
     {
-		// 缓存键是 Assimp 返回的材质相对路径，缓存范围仅限当前 Model 实例。
+		// 单个 Model 的缓存键只有 Assimp 材质相对路径；命中时复制整个旧 Texture，包括首次加载时的 type。
+		// 当前资源未触发跨材质角色复用；若发生，同一路径后续角色仍沿用旧 type，Mesh::Draw 会拼出旧 sampler 名。
         vector<Texture> textures;
         for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {
