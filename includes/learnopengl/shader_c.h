@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
 // 职责：从单个计算 Shader 文件创建 ComputeShader program，并提供与绘制 Shader 相同的 uniform 写入助手。
 // 调用边界：调用方先 use()、设置 uniform，再自行 glDispatchCompute，并根据后续读写类型选择正确的 glMemoryBarrier 位。
-// 生命周期：链接后删除计算阶段对象，但没有析构 glDeleteProgram；ID 只是需由调用方或上下文最终回收的 OpenGL 句柄。
+// 生命周期：链接后对计算阶段调用 glDeleteShader；对象仍附着于 program 时只会标记待删除，待 detach 或 program 删除后才真正释放；本类不 glDeleteProgram。
 // 平台边界：Compute Shader 要求 OpenGL 4.3；macOS 系统 OpenGL 最高 4.1，相关示例可编译但不能用系统驱动运行。
 #ifndef COMPUTE_SHADER_H
 #define COMPUTE_SHADER_H

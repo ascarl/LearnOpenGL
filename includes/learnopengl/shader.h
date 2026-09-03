@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
 // 职责：从文件编译顶点/片段 Shader，并可选加入几何 Shader，链接为一个可供绘制使用的 program。
 // 调用边界：构造前需有当前 OpenGL 上下文和已加载的 GLAD；先 use()，再调用 set* 写入当前 program 的 uniform。
-// 生命周期：链接后会删除各阶段对象，但没有析构调用 glDeleteProgram；ID 的最终释放仍由调用方或上下文结束负责。
+// 生命周期：链接后对顶点/片段及存在的几何阶段调用 glDeleteShader；对象仍附着于 program 时只会标记待删除，待 detach 或 program 删除后才真正释放；本类不 glDeleteProgram。
 // 变体边界：这是支持可选几何阶段的通用版本；shader_m/s 只含两阶段，shader_t 另含细分阶段，shader_c 是计算管线。
 #ifndef SHADER_H
 #define SHADER_H

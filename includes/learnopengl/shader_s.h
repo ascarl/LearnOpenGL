@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
 // 职责：为入门示例创建顶点+片段 Shader program，并仅提供 bool、int、float 三类基础 uniform setter。
 // 调用边界：构造依赖当前 OpenGL 上下文与 GLAD；use() 之后才能用 set* 修改当前 program 的 uniform。
-// 生命周期：链接后删除两个阶段对象，但类本身不在析构时 glDeleteProgram，ID 由调用方或上下文最终回收。
+// 生命周期：链接后对顶点和片段阶段调用 glDeleteShader；对象仍附着于 program 时只会标记待删除，待 detach 或 program 删除后才真正释放；本类不 glDeleteProgram。
 // 变体边界：本文件刻意不依赖 GLM；需要 vec/mat setter 时使用 shader_m，几何阶段使用 shader.h。
 #ifndef SHADER_H
 #define SHADER_H

@@ -101,7 +101,7 @@ public:
         glBindVertexArray(0);
 
         // always good practice to set everything back to defaults once configured.
-		// 这里只恢复活动纹理单元；各单元上的纹理绑定仍保留在 OpenGL 状态中。
+		// 此处将活动纹理单元强制设为 GL_TEXTURE0；没有保存或恢复调用前的活动单元，各纹理单元上的绑定仍保留。
         glActiveTexture(GL_TEXTURE0);
     }
 

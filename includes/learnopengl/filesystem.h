@@ -1,6 +1,6 @@
 // LearnOpenGL 中文导读
 // 职责：把仓库相对资源路径解析为可供纹理、模型和字体加载器使用的路径。
-// 解析优先级：首次调用时缓存 LOGL_ROOT_PATH；未设置时使用 CMake 生成的 logl_root，二者皆空才相对当前工作目录回退。
+// 解析优先级：首次调用时只要 LOGL_ROOT_PATH 存在（即使值为空）就覆盖编译期 logl_root；最终选中的 root 为空时才相对当前工作目录回退。
 // 调用边界：只拼接并返回字符串，不验证文件存在，也不改变进程工作目录或 Shader 的相对查找规则。
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
