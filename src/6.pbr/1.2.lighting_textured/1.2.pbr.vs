@@ -2,7 +2,7 @@
 // LearnOpenGL 中文导读
 // 着色阶段：PBR 顶点着色器，输出 UV、世界空间位置与世界空间法线。
 // 输入输出：model 生成 WorldPos，CPU 提供的 normalMatrix 变换 Normal，view/projection 生成裁剪位置。
-// 核心算法：直接光与 IBL 的 N、V、L、R 都在世界空间计算，避免 BRDF 点积混用坐标系。
+// 数据流：TexCoords 供材质贴图采样，WorldPos/Normal 供片段阶段重建世界空间 N，并由 WorldPos 构造直接光的 V、L。
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
