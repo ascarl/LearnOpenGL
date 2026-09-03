@@ -28,12 +28,27 @@ Note that CodeBlocks or other IDEs may have issues running the programs due to p
 Running `ls $LOGL_ROOT_PATH` should list, among other things, this README file and the resources directory.
 
 ## Mac OS X building
-Building on Mac OS X is fairly simple:
+Install the Xcode command-line tools and the Homebrew dependencies, then configure a separate build directory:
 ```
+xcode-select --install
 brew install cmake assimp glm glfw freetype
-cmake -S . -B build
-cmake --build build -j$(sysctl -n hw.logicalcpu)
+cmake -S . -B build-macos -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-macos --parallel $(sysctl -n hw.logicalcpu)
 ```
+
+To build only one lesson while learning:
+```
+cmake --build build-macos --target 1.getting_started__2.1.hello_triangle --parallel $(sysctl -n hw.logicalcpu)
+```
+
+Executables and shader symlinks are generated under `bin/<chapter>`. Run an executable from its chapter directory so relative shader paths resolve correctly:
+```
+cd bin/1.getting_started
+./1.getting_started__2.1.hello_triangle
+```
+
+Apple Silicon Homebrew installs the required arm64 libraries under `/opt/homebrew`; CMake discovers them automatically. macOS provides OpenGL up to version 4.1. The main lessons use OpenGL 3.3 and are supported, but guest examples that explicitly require newer contexts—weighted blended OIT (4.2), compute shaders (4.3), and DSA (4.5)—cannot run with Apple's system OpenGL implementation even though their C++ sources can compile.
+
 ## Create Xcode project on Mac platform
 Thanks [@caochao](https://github.com/caochao):
 After cloning the repo, go to the root path of the repo, and run the command below:
