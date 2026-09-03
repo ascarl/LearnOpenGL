@@ -163,7 +163,7 @@ void main()
 
 	// iterate through all area lights
 
-	// LUT 只与当前材质粗糙度和视角有关，循环外查询一次后可复用于所有面光源。
+	// 循环外只使用按 roughness 与 sqrt(1-NdotV) 查询的 LTC1 和 LTC2.xy；LTC2.w 仍在每盏灯的两次 LTC_Evaluate 中按各自 elevation/form-factor length 查询。
 	for (int i = 0; i < numAreaLights; i++)
 	{
 		// Evaluate LTC shading

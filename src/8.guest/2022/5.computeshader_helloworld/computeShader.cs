@@ -33,6 +33,6 @@ void main() {
 
 	value.x = mod(float(texelCoord.x) + t * speed, width) / (gl_NumWorkGroups.x * gl_WorkGroupSize.x);
 	value.y = float(texelCoord.y)/(gl_NumWorkGroups.y*gl_WorkGroupSize.y);
-	// imageStore 是无过滤、按整数坐标的图像写入；CPU 屏障后同一纹理才进入屏幕采样 Pass。
+	// imageStore 是无过滤、按整数坐标的图像写入；随后由 CPU 发出的 glMemoryBarrier 是 GPU 内存可见性/顺序命令，并不表示 CPU 等待 GPU 执行完成。
 	imageStore(imgOutput, texelCoord, value);
 }

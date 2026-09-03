@@ -159,7 +159,7 @@ const std::vector<bloomMip>& bloomFBO::MipChain() const
 
 
 
-// 资源所有权：BloomRenderer 也不是 RAII；Init 在堆上创建两个 Shader 并初始化 mFBO，调用者必须在上下文销毁前显式调用 Destroy。
+// 资源所有权：BloomRenderer 也不是 RAII；Init 在堆上创建两个 Shader 包装对象并初始化 mFBO，调用者必须在上下文销毁前显式调用 Destroy。
 class BloomRenderer
 {
 public:
@@ -186,7 +186,7 @@ private:
 };
 
 BloomRenderer::BloomRenderer() : mInit(false) {}
-// 空析构不会代替 Destroy，也不会删除两个堆 Shader 或释放 mFBO 的 GL 资源。
+// 空析构不会代替 Destroy，也不会删除两个堆上的 Shader 包装对象或释放 mFBO 的 GL 资源。
 BloomRenderer::~BloomRenderer() {}
 
 bool BloomRenderer::Init(unsigned int windowWidth, unsigned int windowHeight)
@@ -645,7 +645,7 @@ int main()
         glfwPollEvents();
     }
 
-    // 两个辅助类的析构均为空；必须在 glfwTerminate 销毁 OpenGL 上下文前显式释放 FBO、mip 纹理和两个堆 Shader。
+    // 两个辅助类的析构均为空；Destroy 释放 FBO/mip 纹理并 delete 两个堆上的 Shader 包装对象，但 Shader 没有析构调用 glDeleteProgram，程序对象实际留到 glfwTerminate 销毁上下文时回收。
     bloomRenderer.Destroy();
     glfwTerminate();
     return 0;

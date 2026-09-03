@@ -231,7 +231,7 @@ GLuint loadMTexture()
 GLuint loadLUTTexture()
 {
 
-	// LTC2 编码幅度/Fresnel/地平线裁剪项，与 LTC1 一起按粗糙度和 NdotV 查询。
+	// LTC2.xy 按 roughness 与 sqrt(1-NdotV) 坐标提供 GGX 幅度/Fresnel 参数；LTC2.w 在每次 LTC_Evaluate 中改按 elevation 与 form-factor length 坐标查询地平线裁剪系数。
 	GLuint texture = 0;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);

@@ -2,7 +2,7 @@
 // LearnOpenGL 中文导读
 // 着色阶段：细分控制着色器；每个四控制点 patch 启动 4 个 invocation，各自转发一个控制点。
 // 输入输出：读取 VS 的 gl_in/TexCoord 数组并写 gl_out/TextureCoord；invocation 0 额外写该 patch 的四条外边和两条内边细分级别。
-// 数据流：控制点先转到观察空间估算相机距离，mix 在近处 64 与远处 4 之间选择细分密度，再交给固定功能细分器。
+// 数据流：控制点先转到观察空间，以 abs(z_eye) 得到轴向深度 |-z_eye|（不是三维欧氏相机距离）；mix 在近处 64 与远处 4 之间选择细分密度，再交给固定功能细分器。
 
 
 layout(vertices=4) out;
@@ -21,7 +21,7 @@ void main()
     if(gl_InvocationID == 0)
     {
 
-        // patch 级内建变量只需写一次；各边使用对应两个端点的较近距离，使相邻 patch 更容易得到一致边级别。
+        // patch 级内建变量只需写一次；各边使用对应两端点中较小的轴向深度归一化值，使相邻 patch 更容易得到一致边级别。
         const int MIN_TESS_LEVEL = 4;
         const int MAX_TESS_LEVEL = 64;
         const float MIN_DISTANCE = 20;
