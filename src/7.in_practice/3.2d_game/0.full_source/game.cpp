@@ -288,7 +288,7 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
-    // 道具对象经历下落、拾取激活、持续时间倒计时和延迟移除；同类效果叠加时只在最后一个到期后复原。
+    // speed 与 pad-size-increase（Duration 为 0）会在拾取时立即累加并持续到 ResetPlayer；其余四类才递减 Duration，并在没有同类激活效果时撤销。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;
