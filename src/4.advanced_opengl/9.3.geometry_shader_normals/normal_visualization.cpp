@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用额外几何 Pass 将模型每个顶点的法线显示为线段，直观检查法线方向与变换。
+// 核心流程：第一 Pass 正常绘制纹理模型；第二 Pass 重绘同一网格，几何 Shader 为每个三角形的三个顶点各发射一条黄线。
+// 观察重点：法线先用 view*model 的逆转置矩阵变到观察空间，再与观察空间位置一起投影，保证线段方向一致。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -113,9 +118,11 @@ int main()
         shader.setMat4("model", model);
 
         // draw model as usual
+        // Pass 1 写默认颜色和深度：正常纹理三角形构成可见模型表面。
         backpack.Draw(shader);
 
         // then draw model with normal visualizing geometry shader
+        // Pass 2 读取相同网格属性并写黄色线段；已有深度附件让被遮挡法线仍受可见性约束。
         normalShader.use();
         normalShader.setMat4("projection", projection);
         normalShader.setMat4("view", view);

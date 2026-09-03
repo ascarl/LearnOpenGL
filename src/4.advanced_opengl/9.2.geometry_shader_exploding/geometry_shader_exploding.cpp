@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：让几何 Shader 按三角形面法线随时间移动整个图元，形成周期性爆炸效果。
+// 核心流程：模型网格提交三角形，顶点阶段完成 MVP 变换，几何阶段计算每面方向并发射位移后的三个顶点。
+// 观察重点：time 驱动位移幅度；同一三角形三个顶点使用相同法线和幅度，因而保持图元形状整体外移。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -111,9 +116,11 @@ int main()
         shader.setMat4("model", model);
 
         // add time component to geometry shader in the form of a uniform
+        // 几何阶段读取连续时间，把 sin(time) 映射到 [0,1]，使爆炸位移周期往复。
         shader.setFloat("time", static_cast<float>(glfwGetTime()));
 
         // draw model
+        // 每个模型三角形依次流经 VS -> GS -> FS；GS 仍输出一个三顶点三角形。
         nanosuit.Draw(shader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

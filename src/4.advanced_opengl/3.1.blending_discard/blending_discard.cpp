@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 alpha test 风格的 discard 去掉草纹理透明背景，避免透明区域写入颜色和深度。
+// 核心流程：先绘制不透明立方体与地面，再绘制带 alpha 通道的植被四边形；片段 Shader 丢弃低 alpha 片段。
+// 观察重点：本例没有启用颜色混合，保留下来的片段仍完全不透明；GL_CLAMP_TO_EDGE 可避免边缘插值产生色边。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -245,6 +250,7 @@ int main()
         model = glm::mat4(1.0f);
         shader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        // 不透明物体先建立深度；植被的透明背景由 Shader 丢弃，不会污染颜色或深度附件。
         // vegetation
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);

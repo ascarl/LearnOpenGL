@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：显式管理离屏 MSAA，并把多样本颜色解析到普通纹理后执行屏幕后处理。
+// 核心流程：Pass 1 写 4x 颜色与深度样本；Pass 2 blit resolve 到单采样 screenTexture；Pass 3 采样它绘制全屏四边形。
+// 观察重点：sampler2D 不能直接读取普通意义上的多采样附件，因此先解析为单采样纹理，再进行灰度后处理。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -159,6 +164,7 @@ int main()
 
     // configure MSAA framebuffer
     // --------------------------
+    // 两个附件都使用 4 个样本，颜色和深度/模板样本数一致才能组成完整的多采样 Framebuffer。
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -182,6 +188,7 @@ int main()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // configure second post-processing framebuffer
+    // intermediateFBO 只有单采样颜色纹理，作为 resolve 目标并供普通 sampler2D 读取。
     unsigned int intermediateFBO;
     glGenFramebuffers(1, &intermediateFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
@@ -223,6 +230,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 1. draw scene as normal in multisampled buffers
+        // Pass 1 写 textureColorBufferMultiSampled 与 rbo 深度部分；模板测试未启用，模板样本未使用。
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -239,11 +247,13 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // 2. now blit multisampled buffer(s) to normal colorbuffer of intermediate FBO. Image is stored in screenTexture
+        // Pass 2 读多采样颜色附件、写单采样 screenTexture；blit 在每个目标像素上完成样本解析。
         glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
         glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
         // 3. now render quad with scene's visuals as its texture image
+        // Pass 3 读 screenTexture、写默认颜色附件；关闭深度测试，避免全屏后处理四边形被场景深度拒绝。
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);

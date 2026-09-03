@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：理解标准 alpha 混合依赖绘制顺序，并为透明窗户执行从远到近排序。
+// 核心流程：先绘制所有不透明物体并建立深度，再按相机距离降序绘制透明四边形并混合源/目标颜色。
+// 观察重点：深度测试仍用于剔除被遮挡片段，但常规深度写入无法自动解决多个透明表面之间的合成顺序。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -74,6 +79,7 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    // 输出颜色 = 源颜色 * 源 alpha + 已有目标颜色 * (1 - 源 alpha)。
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -220,6 +226,7 @@ int main()
 
         // sort the transparent windows before rendering
         // ---------------------------------------------
+        // 每帧相机都可能移动，因此透明物体距离必须重新计算；map 按距离升序保存。
         std::map<float, glm::vec3> sorted;
         for (unsigned int i = 0; i < windows.size(); i++)
         {
@@ -259,6 +266,7 @@ int main()
         // windows (from furthest to nearest)
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
+        // 逆序遍历得到从远到近的绘制顺序，使近处颜色叠加在已经合成好的远处颜色之上。
         for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
         {
             model = glm::mat4(1.0f);

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把十万个小行星的 model 矩阵作为实例属性批量上传，以每个 Mesh 一次 draw 替代逐对象提交。
+// 核心流程：预生成 mat4 数组并写入 instance VBO；每个岩石 VAO 用四个 vec4 attribute 读取矩阵列，divisor 均设为 1。
+// 观察重点：行星仍走普通 model uniform；小行星通过 glDrawElementsInstanced 在一次命令中复用索引、顶点和纹理。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -119,6 +124,7 @@ int main()
 
     // configure instanced array
     // -------------------------
+    // 一次上传连续的十万个 mat4；实例绘制时同一实例的所有顶点读取同一矩阵。
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -132,6 +138,7 @@ int main()
     {
         unsigned int VAO = rock.meshes[i].VAO;
         glBindVertexArray(VAO);
+        // 一个 mat4 占用四个 attribute location，每个 location 对应矩阵的一列 vec4。
         // set attribute pointers for matrix (4 times vec4)
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
@@ -187,6 +194,7 @@ int main()
         planet.Draw(planetShader);
 
         // draw meteorites
+        // 每个 Mesh 只提交一次索引绘制；amount 决定 GPU 重放网格并推进实例矩阵的次数。
         asteroidShader.use();
         asteroidShader.setInt("texture_diffuse1", 0);
         glActiveTexture(GL_TEXTURE0);

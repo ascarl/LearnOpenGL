@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把六张方向纹理组成 Cubemap，并以包围场景的立方体渲染无穷远天空盒。
+// 核心流程：先按正常深度规则绘制场景，再移除观察矩阵平移、用 GL_LEQUAL 在最远深度绘制天空盒。
+// 观察重点：Cubemap 用三维方向而非二维 UV 采样；六个面必须按 +X/-X/+Y/-Y/+Z/-Z 对应加载。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -199,6 +204,7 @@ int main()
 
     vector<std::string> faces
     {
+        // 数组顺序必须与 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i 的六个目标完全一致。
         FileSystem::getPath("resources/textures/skybox/right.jpg"),
         FileSystem::getPath("resources/textures/skybox/left.jpg"),
         FileSystem::getPath("resources/textures/skybox/top.jpg"),
@@ -250,9 +256,11 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
+        // 天空盒最后绘制：只填补仍处于最远深度的背景像素，可减少被前景覆盖的片段工作。
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
         skyboxShader.use();
+        // 去除相机平移后天空盒只随视线旋转，看起来始终位于观察者无限远处。
         view = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation from the view matrix
         skyboxShader.setMat4("view", view);
         skyboxShader.setMat4("projection", projection);
@@ -386,6 +394,7 @@ unsigned int loadTexture(char const * path)
 // -------------------------------------------------------
 unsigned int loadCubemap(vector<std::string> faces)
 {
+    // 六次上传共享同一个纹理对象；目标枚举递增依次选择 Cubemap 的六个面。
     unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);

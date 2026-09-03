@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用一次实例化绘制重复提交同一四边形，并以实例属性为每个副本提供独立平移量。
+// 核心流程：普通 VBO 保存六个顶点，instanceVBO 保存 100 个偏移；attribute divisor=1 让偏移每实例前进一次。
+// 观察重点：glDrawArraysInstanced 只发出一次 CPU 绘制命令，GPU 组合逐顶点属性与逐实例属性生成 100 个副本。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -70,6 +75,7 @@ int main()
 
     // store instance data in an array buffer
     // --------------------------------------
+    // 实例数据与网格顶点分开存储，但都通过同一个 VAO 描述给顶点 Shader。
     unsigned int instanceVBO;
     glGenBuffers(1, &instanceVBO);
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
@@ -103,6 +109,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // divisor=1 表示 location 2 在每个实例结束后前进，而不是每处理一个顶点就前进。
     glVertexAttribDivisor(2, 1); // tell OpenGL this is an instanced vertex attribute.
 
 
@@ -118,6 +125,7 @@ int main()
         // draw 100 instanced quads
         shader.use();
         glBindVertexArray(quadVAO);
+        // 六个网格顶点被复用 100 次，实例编号隐式选择对应的 aOffset 元素。
         glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100); // 100 triangles of 6 vertices each
         glBindVertexArray(0);
 

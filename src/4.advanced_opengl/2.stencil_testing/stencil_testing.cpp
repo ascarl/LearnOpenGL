@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用模板缓冲标记物体覆盖区域，并通过第二个 Pass 绘制不与原物体重合的放大轮廓。
+// 核心流程：地面不写模板；第一 Pass 绘制立方体并写入 1；第二 Pass 仅在模板值不等于 1 的位置绘制纯色放大体。
+// 观察重点：颜色、深度、模板是相互独立的附件；每个 Pass 都要明确比较函数、写掩码和状态恢复。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -75,6 +80,7 @@ int main()
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    // 模板操作设为：模板/深度测试失败时保留，二者都通过时用参考值替换当前模板值。
     glEnable(GL_STENCIL_TEST);
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
@@ -206,6 +212,7 @@ int main()
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
 
+        // 地面只写颜色和深度，不写模板，避免轮廓逻辑把整块地板当成被标记物体。
         // draw floor as normal, but don't write the floor to the stencil buffer, we only care about the containers. We set its mask to 0x00 to not write to the stencil buffer.
         glStencilMask(0x00);
         // floor
@@ -217,6 +224,7 @@ int main()
 
         // 1st. render pass, draw objects as normal, writing to the stencil buffer
         // --------------------------------------------------------------------
+        // 第一 Pass 写入：颜色、深度，以及立方体可见片段位置的模板值 1。
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilMask(0xFF);
         // cubes
@@ -235,6 +243,7 @@ int main()
         // Because the stencil buffer is now filled with several 1s. The parts of the buffer that are 1 are not drawn, thus only drawing 
         // the objects' size differences, making it look like borders.
         // -----------------------------------------------------------------------------------------------------------------------------
+        // 第二 Pass 读取模板、关闭模板写入和深度测试，只让放大体超出原轮廓的部分着色。
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
         glDisable(GL_DEPTH_TEST);
@@ -254,6 +263,7 @@ int main()
         shaderSingleColor.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
+        // 恢复后续帧需要的写掩码、模板比较与深度测试，避免状态泄漏到下一次绘制。
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glEnable(GL_DEPTH_TEST);

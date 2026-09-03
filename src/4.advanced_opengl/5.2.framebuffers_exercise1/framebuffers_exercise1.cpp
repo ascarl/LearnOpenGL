@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把离屏场景纹理作为镜面画中画，在同一帧组合反向相机视图与正常视图。
+// 核心流程：第一 Pass 用反向视图写离屏颜色和深度；第二 Pass 正常绘制默认目标；最后采样镜像纹理叠加小四边形。
+// 观察重点：每个目标切换后都要清理自己的附件并设置对应深度状态，后一个 Pass 只能读取已完成的前序输出。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -195,6 +200,7 @@ int main()
 
     // framebuffer configuration
     // -------------------------
+    // 可采样颜色纹理承载镜像画面；深度/模板 Renderbuffer 只服务于镜像场景的可见性测试。
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -238,6 +244,7 @@ int main()
         // first render pass: mirror texture.
         // bind to framebuffer and draw to color texture as we normally 
         // would, but with the view camera reversed.
+        // Pass 1 读场景几何/纹理，写 textureColorbuffer 与 rbo 深度部分；相机朝向取反形成后视镜视野。
         // bind to framebuffer and draw scene as we normally would to color texture 
         // ------------------------------------------------------------------------
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -277,6 +284,7 @@ int main()
 
         // second render pass: draw as normal
         // ----------------------------------
+        // Pass 2 写默认帧缓冲的颜色和深度，使用正常相机；不会覆盖第一 Pass 的离屏纹理。
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -306,6 +314,7 @@ int main()
 
         // now draw the mirror quad with screen texture
         // --------------------------------------------
+        // Pass 3 读 textureColorbuffer，写默认颜色附件顶部区域；关闭深度测试保证叠加层可见。
         glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
 
         screenShader.use();

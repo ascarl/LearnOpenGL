@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：理解深度缓冲如何按片段保存最近深度，以及不同深度比较函数怎样改变遮挡结果。
+// 核心流程：上传立方体与地面网格，每帧同时清空颜色和深度缓冲，再按相同 Shader 绘制多个物体。
+// 观察重点：本例使用 GL_ALWAYS 让所有片段通过深度测试，画面会退化为主要由提交顺序决定的覆盖关系。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -73,6 +78,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 默认帧缓冲提供深度附件；启用测试后，片段会先比较深度，再决定是否写入颜色与深度。
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_ALWAYS); // always pass the depth test (same effect as glDisable(GL_DEPTH_TEST))
 
@@ -188,6 +194,7 @@ int main()
         // render
         // ------
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        // 深度值会跨绘制调用保留，因此每帧开始必须和颜色缓冲一起清空。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();

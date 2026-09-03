@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用世界空间视线与法线计算环境反射方向，并从 Cubemap 获得近似镜面环境颜色。
+// 核心流程：先用环境映射 Shader 绘制反射立方体，再以相同 Cubemap 在最远深度绘制天空盒。
+// 观察重点：当前位置、法线和 cameraPos 必须处于同一世界空间；当前代码使用 reflect，折射可改用 refract 并提供折射率比。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -242,6 +247,7 @@ int main()
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
         shader.setVec3("cameraPos", camera.Position);
+        // 物体 Pass 读取 Cubemap；片段 Shader 以世界空间反射方向采样并写前景颜色、深度。
         // cubes
         glBindVertexArray(cubeVAO);
         glActiveTexture(GL_TEXTURE0);
@@ -249,6 +255,7 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
+        // 天空盒 Pass 读取同一 Cubemap，只补充深度为最远处的背景，并在完成后恢复 GL_LESS。
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
         skyboxShader.use();
@@ -385,6 +392,7 @@ unsigned int loadTexture(char const * path)
 // -------------------------------------------------------
 unsigned int loadCubemap(vector<std::string> faces)
 {
+    // 依次把六张图上传到 +X 至 -Z 目标，形成可由三维方向连续采样的单个纹理对象。
     unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);

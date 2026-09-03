@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Uniform Buffer Object 在多个 Shader Program 之间共享 projection/view 矩阵，减少重复 uniform 更新。
+// 核心流程：四个程序的 Matrices block 都绑定到绑定点 0；一个 std140 UBO 依次保存两个 mat4，各程序只单独设置 model。
+// 观察重点：Shader block 索引属于各自程序，绑定点连接 block 与 Buffer；std140 使 mat4 按四个 vec4 列对齐。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -137,6 +142,7 @@ int main()
 
     // configure a uniform buffer object
     // ---------------------------------
+    // 每个程序都拥有独立 block 索引，但统一映射到绑定点 0 后即可读取同一段 UBO 存储。
     // first. We get the relevant block indices
     unsigned int uniformBlockIndexRed = glGetUniformBlockIndex(shaderRed.ID, "Matrices");
     unsigned int uniformBlockIndexGreen = glGetUniformBlockIndex(shaderGreen.ID, "Matrices");
@@ -151,6 +157,7 @@ int main()
     unsigned int uboMatrices;
     glGenBuffers(1, &uboMatrices);
     glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+    // std140 下 mat4 占四个按 16 字节对齐的列，因此两个 glm::mat4 可连续放在 0 和 sizeof(mat4) 偏移处。
     glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // define the range of the buffer that links to a uniform binding point
@@ -182,12 +189,14 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // set the view and projection matrix in the uniform block - we only have to do this once per loop iteration.
+        // projection 固定在 UBO 前半段；每帧只更新随相机变化的后半段 view，四个程序立即共享新值。
         glm::mat4 view = camera.GetViewMatrix();
         glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         // draw 4 cubes 
+        // 每个立方体切换片段 Shader 与 model，但 projection/view 不再逐程序重复上传。
         // RED
         glBindVertexArray(cubeVAO);
         shaderRed.use();

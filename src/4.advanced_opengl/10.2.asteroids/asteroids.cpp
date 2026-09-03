@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：建立小行星带的非实例化基线，观察大量 uniform 更新和绘制调用带来的 CPU 开销。
+// 核心流程：预生成 1000 个随机 model 矩阵；每帧逐个上传矩阵并调用 rock.Draw，行星使用同一普通 Shader 单独绘制。
+// 观察重点：几何和材质虽高度重复，CPU 仍为每颗小行星遍历 Mesh 并提交 draw，供下一节实例化方案对比。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -85,6 +90,7 @@ int main()
 
     // generate a large list of semi-random model transformation matrices
     // ------------------------------------------------------------------
+    // 环形基准位置叠加随机位移、缩放和旋转，所有结果预计算后在渲染循环中复用。
     unsigned int amount = 1000;
     glm::mat4* modelMatrices;
     modelMatrices = new glm::mat4[amount];
@@ -150,6 +156,7 @@ int main()
         planet.Draw(shader);
 
         // draw meteorites
+        // 非实例化路径：每个对象都更新一次 model uniform，并为 Model 中每个 Mesh 发出独立绘制命令。
         for (unsigned int i = 0; i < amount; i++)
         {
             shader.setMat4("model", modelMatrices[i]);

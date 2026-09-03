@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：创建自定义 Framebuffer，把三维场景先渲染到纹理，再通过全屏四边形显示离屏结果。
+// 核心流程：第一 Pass 写颜色纹理及组合 Renderbuffer 的深度部分；第二 Pass 读取颜色纹理并写入默认帧缓冲。
+// 观察重点：附件尺寸和格式必须匹配且 Framebuffer 要完整；屏幕 Pass 不需要场景深度测试。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -195,6 +200,7 @@ int main()
 
     // framebuffer configuration
     // -------------------------
+    // Framebuffer 本身只是附件集合；颜色用可采样纹理，深度/模板因不再读取而用 Renderbuffer。
     unsigned int framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -237,6 +243,7 @@ int main()
 
         // render
         // ------
+        // Pass 1 写 textureColorbuffer 与 rbo 的深度部分；模板测试未启用，因此组合附件的模板部分未使用。
         // bind to framebuffer and draw scene as we normally would to color texture 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
@@ -269,6 +276,7 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 
+        // Pass 2 读：textureColorbuffer；写：默认帧缓冲颜色附件。全屏四边形覆盖整个 NDC。
         // now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：观察透视投影后的非线性深度，并在片段 Shader 中将它还原为近似线性的观察空间距离。
+// 核心流程：CPU 仍以 GL_LESS 绘制立方体和地面，片段阶段改为把线性化深度输出成灰度。
+// 观察重点：近裁剪面附近占据更多深度精度；除以 far 后，越远的可见片段显示得越亮。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -73,6 +78,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // GL_LESS 只接受比当前深度附件记录值更近的片段，是常见的不透明物体深度规则。
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -188,6 +194,7 @@ int main()
         // render
         // ------
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        // 清除深度附件后，本帧所有几何体才能重新建立正确的可见性关系。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();

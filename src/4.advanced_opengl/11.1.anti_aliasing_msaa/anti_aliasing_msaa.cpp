@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：理解默认帧缓冲 MSAA 如何用多个子样本的覆盖率平滑三角形边缘。
+// 核心流程：启用 GL_MULTISAMPLE 后照常绘制立方体；若默认帧缓冲具有多个样本，显示前由系统完成解析。
+// 观察重点：本文件未请求 GLFW_SAMPLES；平台若未默认提供多样本附件，仅启用状态不会实际增加样本数。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -40,6 +45,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // 若要明确保证 4x MSAA，应在创建窗口前设置 GLFW_SAMPLES=4；当前源码保留原状，仅依赖平台配置。
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -73,6 +79,7 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    // 当默认帧缓冲确有多个样本时，覆盖率与每样本深度/颜色存储由固定功能管线处理。
     glEnable(GL_MULTISAMPLE); // enabled by default on some drivers, but not all so always enable to make sure
 
     // build and compile shaders
@@ -162,6 +169,7 @@ int main()
         shader.setMat4("model", glm::mat4(1.0f));
 
         glBindVertexArray(cubeVAO);
+        // 应用仍只提交一次普通 draw；多样本开销发生在光栅化和默认帧缓冲存储阶段。
         glDrawArrays(GL_TRIANGLES, 0, 36);     
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

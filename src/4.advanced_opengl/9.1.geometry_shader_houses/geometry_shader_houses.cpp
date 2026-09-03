@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在顶点与片段阶段之间插入几何 Shader，把每个输入点扩展为一个由三角形条带组成的小房子。
+// 核心流程：CPU 只提交四个带颜色的 GL_POINTS；几何阶段针对每个点 EmitVertex 五次并结束一个独立图元。
+// 观察重点：几何 Shader 的输入/输出图元类型和 max_vertices 决定一次调用可消费与生成的几何数量。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -84,6 +89,7 @@ int main()
         // draw points
         shader.use();
         glBindVertexArray(VAO);
+        // 四个点触发四次几何 Shader 调用，每次由一个点生成一栋五顶点房子。
         glDrawArrays(GL_POINTS, 0, 4);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
