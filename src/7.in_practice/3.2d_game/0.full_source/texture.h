@@ -9,7 +9,8 @@
 // LearnOpenGL 中文导读
 // 学习目标：封装二维纹理句柄、像素格式和采样参数，向其他游戏模块提供统一绑定接口。
 // 核心流程：构造时创建 texture ID，Generate 上传图像并设置环绕/过滤，Bind 绑定到当前活动纹理单元。
-// 生命周期：Texture2D 是可复制的句柄包装；实际删除由 ResourceManager::Clear 集中执行。
+// 生命周期：Texture2D 是可复制的句柄包装；ResourceManager::Clear 只删除 Textures 资源映射最终保存的纹理 ID。
+// 当前缺口：PostProcessor::Texture 不在映射且没有析构释放；Textures[name] 默认构造的 ID 也会被浅赋值覆盖而泄漏。
 
 #ifndef TEXTURE_H
 #define TEXTURE_H

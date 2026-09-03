@@ -8,8 +8,10 @@
 ******************************************************************/
 // LearnOpenGL 中文导读
 // 阶段快照：第 8 阶段，实现六类道具的随机生成与拾取，并区分即时累加效果和可撤销的定时效果。
-// 核心流程：speed 与 pad-size-increase 以 Duration 0 立即累加速度或挡板宽度；sticky、pass-through、confuse、chaos 才倒计时并处理同类重叠。
-// 生命周期：即时道具很快变为非 Activated，但增量持续到 ResetPlayer；定时道具在最后一个同类实例到期后撤销，随后才与已销毁实体一起移出 vector。
+// 核心流程：speed 与 pad-size-increase 以 Duration 0 立即累加；sticky、pass-through、confuse、chaos 才依赖倒计时控制效果生命周期并处理同类重叠。
+// 生命周期：即时增量持续到 ResetPlayer；定时记录到期后变为非 Activated，并在无同类活跃记录时关闭对应状态。
+// 状态边界：Activated 只表示计时记录仍存活，不保证效果当前开启；ResetPlayer 可提前关闭四种效果，却不清除对应记录或计时器。
+// 互斥边界：confuse/chaos 拾取后都会进入 Activated 计时，但当另一效果已开启时，本次效果可能从未真正启用。
 
 #include <algorithm>
 

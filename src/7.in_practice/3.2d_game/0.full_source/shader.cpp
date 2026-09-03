@@ -7,8 +7,8 @@
 ** option) any later version.
 ******************************************************************/
 // LearnOpenGL 中文导读
-// 学习目标：实现 GLSL 各阶段编译、program 链接、错误日志与类型安全的 uniform 辅助接口。
-// 核心流程：分别编译顶点/片段及可选几何着色器，附加并链接后删除阶段对象；program 保留已链接机器码。
+// 学习目标：实现 GLSL 各阶段编译、program 链接、错误日志与按类型封装的 uniform 接口。
+// 核心流程：分别编译顶点/片段及可选几何着色器，附加并链接后删除阶段对象；最终保留链接后的可执行 program。
 // 观察重点：Set* 默认假设目标 program 已 Use；useShader=true 可在上传前主动切换当前 program。
 
 #include "shader.h"

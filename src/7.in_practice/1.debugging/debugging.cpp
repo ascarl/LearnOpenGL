@@ -1,6 +1,7 @@
 // LearnOpenGL 中文导读
 // 学习目标：比较 glGetError 主动轮询与调试上下文回调两种 OpenGL 诊断方式。
-// 核心流程：请求调试上下文、注册同步回调，再通过一次故意的非法纹理调用观察错误来源、类型与严重级别。
+// 对照方式：glCheckError() 只是供比较的轮询助手，当前 main 并未调用；示例实际通过同步调试回调接收诊断。
+// 触发来源：非法纹理 target 会产生 GL_INVALID_ENUM，shader.use() 前上传 uniform 还会产生 GL_INVALID_OPERATION，回调消息并非只来自前者。
 // 观察重点：调试消息只在驱动提供调试上下文时启用；发布构建通常应关闭同步输出并过滤通知类消息。
 
 #include <glad/glad.h>

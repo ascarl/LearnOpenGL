@@ -30,7 +30,8 @@ GameObject        *Player;
 BallObject        *Ball;
 ParticleGenerator *Particles;
 PostProcessor     *Effects;
-// 这是文件作用域静态初始化，不是 Game::Init 的一部分；程序进入 main 时引擎指针已经完成初始化。
+// 这是文件作用域静态初始化，不是 Game::Init 的一部分；进入 main 前已尝试创建引擎，但 createIrrKlangDevice 可能返回空指针。
+// 后续 play2D/drop 均未判空，因此音频引擎初始化失败会形成崩溃边界。
 ISoundEngine      *SoundEngine = createIrrKlangDevice();
 
 float ShakeTime = 0.0f;

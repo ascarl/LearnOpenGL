@@ -37,7 +37,8 @@ GameObject        *Player;
 BallObject        *Ball;
 ParticleGenerator *Particles;
 PostProcessor     *Effects;
-// 音频引擎在进入 main 之前创建；Game::Init 只用它启动背景音乐，后续碰撞分支再直接播放事件音效。
+// 音频引擎在进入 main 前尝试创建；createIrrKlangDevice 可能返回空指针，而后续 play2D/drop 未判空，初始化失败会形成崩溃边界。
+// Game::Init 只用该指针启动背景音乐，后续碰撞分支再直接播放事件音效。
 ISoundEngine      *SoundEngine = createIrrKlangDevice();
 TextRenderer      *Text;
 
@@ -288,7 +289,9 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
-    // speed 与 pad-size-increase（Duration 为 0）会在拾取时立即累加并持续到 ResetPlayer；其余四类才依赖 Duration 倒计时控制效果生命周期，并在没有同类激活效果时撤销。
+    // speed 与 pad-size-increase（Duration 为 0）会在拾取时立即累加并持续到 ResetPlayer；其余四类依赖 Duration 倒计时控制效果生命周期。
+    // Activated 只表示计时记录仍存活，不保证效果当前开启：ResetPlayer 会提前关闭四种定时效果，却不会清除对应记录或计时器。
+    // confuse/chaos 互斥时，拾取记录仍会进入 Activated 并倒计时，但对应效果可能从未启用；到期后仅在无同类活跃记录时执行关闭。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;

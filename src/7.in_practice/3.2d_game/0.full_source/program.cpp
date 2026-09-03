@@ -29,7 +29,6 @@ const unsigned int SCREEN_WIDTH = 800;
 // The height of the screen
 const unsigned int SCREEN_HEIGHT = 600;
 
-// 全局对象的析构晚于 main 内的 glfwTerminate，这个示例没有建立正确的“先释放全部 GPU 对象，再销毁上下文”顺序。
 Game Breakout(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 int main(int argc, char *argv[])
@@ -104,7 +103,6 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     ResourceManager::Clear();
 
-    // 终止 GLFW 后才离开 main，全局 Breakout 随后析构；这是当前教学代码的 GPU 生命周期局限。
     glfwTerminate();
     return 0;
 }
