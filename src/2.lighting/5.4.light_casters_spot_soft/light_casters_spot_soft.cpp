@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：为相机聚光灯增加内外截止角，在两者之间平滑衰减，消除硬边突变。
+// 核心流程：CPU 每帧上传 camera.Position/Front、cutOff/outerCutOff 与距离衰减参数，Shader 计算连续锥角强度。
+// 本节新增：内锥保持完整直接光，过渡带从 1 平滑降至 0，外锥之外不再有漫反射和镜面贡献。
+// 观察重点：内角小于外角，但余弦值反而更大；两余弦之差决定软边宽度。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -126,6 +131,7 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
     };
     // positions all containers
+    // 与硬边版本保持相同场景布置，便于只比较光锥边界算法造成的视觉差异。
     glm::vec3 cubePositions[] = {
         glm::vec3( 0.0f,  0.0f,  0.0f),
         glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -172,6 +178,7 @@ int main()
     // shader configuration
     // --------------------
     lightingShader.use();
+    // 两张材质纹理固定映射到单元 0/1，聚光软边不会改变资源绑定方式。
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
@@ -197,9 +204,11 @@ int main()
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
+        // 聚光灯继续绑定相机；位置决定距离衰减，Front 决定锥轴方向。
         lightingShader.setVec3("light.position", camera.Position);
         lightingShader.setVec3("light.direction", camera.Front);
         lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+        // outerCutOff 对应更大的外角和更小的余弦，两阈值之间形成连续过渡带。
         lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
         lightingShader.setVec3("viewPos", camera.Position);
 
@@ -235,6 +244,7 @@ int main()
 
         // render containers
         glBindVertexArray(cubeVAO);
+        // Shader 对每个片段同时计算 Phong、距离 attenuation 和软边 intensity。
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -248,6 +258,7 @@ int main()
         }
 
         // again, a lamp object is weird when we only have a spot light, don't render the light object
+        // 相机手电筒无需额外几何标记，实际光锥边缘由内外截止角直接体现在受光物体上。
         // lightCubeShader.use();
         // lightCubeShader.setMat4("projection", projection);
         // lightCubeShader.setMat4("view", view);
@@ -342,6 +353,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // 文件像素先由 stb_image 解码，GPU 拷贝完成后由 stbi_image_free 回收 CPU 缓冲。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {

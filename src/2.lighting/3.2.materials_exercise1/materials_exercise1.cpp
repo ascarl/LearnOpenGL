@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：为相同立方体套用预设青色塑料材质，观察材质参数而非几何变化带来的外观差异。
+// 核心流程：光源三分量保持白色全强度，CPU 上传独立 ambient/diffuse/specular 与 shininess 材质系数。
+// 本练习新增：用材质表中的一组系数替换上一节参数，验证 Material 结构可复用同一 Shader。
+// 观察重点：参数是线性 RGB 反射响应；镜面颜色与漫反射颜色不必相同。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -82,6 +87,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 沿用上一节的位置/法线布局，确保画面变化只来自材质参数而非几何输入。
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -179,11 +185,13 @@ int main()
         lightingShader.setVec3("viewPos", camera.Position);
 
         // light properties
+        // 白光三分量均为全强度，便于直接观察材质各反射系数的作用。
         lightingShader.setVec3("light.ambient", 1.0f, 1.0f, 1.0f); // note that all light colors are set at full intensity
         lightingShader.setVec3("light.diffuse", 1.0f, 1.0f, 1.0f);
         lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         // material properties
+        // 这组环境、漫反射和镜面系数共同定义预设青色塑料外观。
         lightingShader.setVec3("material.ambient", 0.0f, 0.1f, 0.06f);
         lightingShader.setVec3("material.diffuse", 0.0f, 0.50980392f, 0.50980392f);
         lightingShader.setVec3("material.specular", 0.50196078f, 0.50196078f, 0.50196078f);

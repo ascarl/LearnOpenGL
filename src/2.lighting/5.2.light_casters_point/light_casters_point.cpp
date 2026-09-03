@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：实现具有有限位置和距离衰减的点光源，并观察多个物体在不同距离下的亮度变化。
+// 核心流程：CPU 上传 lightPos 与 constant/linear/quadratic 系数，Shader 按每个片段到光源的距离衰减 Phong 三项。
+// 本节新增：方向由 lightPos-FragPos 决定，强度按经验衰减公式下降；灯立方体重新用于标示位置。
+// 观察重点：调整一次项和二次项会改变有效照明半径，而不会移动光源或改变材质纹理。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -129,6 +134,7 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
     };
     // positions all containers
+    // 多个物体用于直观比较它们到同一固定点光源的距离与受光强度。
     glm::vec3 cubePositions[] = {
         glm::vec3( 0.0f,  0.0f,  0.0f),
         glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -175,6 +181,7 @@ int main()
     // shader configuration
     // --------------------
     lightingShader.use();
+    // 两个 sampler 的单元映射固定设置，具体纹理对象在每帧 draw 前绑定。
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
@@ -207,6 +214,7 @@ int main()
         lightingShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
         lightingShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
         lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+        // 这组三项对应 1/(Kc + Kl*d + Kq*d²)，决定点光源随距离衰减的曲线。
         lightingShader.setFloat("light.constant", 1.0f);
         lightingShader.setFloat("light.linear", 0.09f);
         lightingShader.setFloat("light.quadratic", 0.032f);
@@ -233,6 +241,7 @@ int main()
 
         // render containers
         glBindVertexArray(cubeVAO);
+        // 每个立方体的 FragPos 不同，片段 Shader 会针对同一 lightPos 得到不同距离和 attenuation。
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -247,6 +256,7 @@ int main()
 
 
          // also draw the lamp object
+         // 灯标记位于与 Shader light.position 相同的 lightPos，便于把衰减效果与空间距离对应起来。
          lightCubeShader.use();
          lightCubeShader.setMat4("projection", projection);
          lightCubeShader.setMat4("view", view);
@@ -341,6 +351,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // stb_image 解码到 CPU 内存，随后 glTexImage2D 把像素复制进 textureID 对应的 GPU 对象。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Assimp 导入 OBJ 场景，把模型节点、网格、索引和材质纹理转成可由 OpenGL 绘制的对象。
+// 核心流程：Model 递归遍历 Assimp 节点并创建 Mesh；Mesh 上传 VAO/VBO/EBO、绑定材质纹理，再由共享 Shader 绘制。
+// 本章新增：入口程序不再手写顶点数组，只负责相机/MVP 与 Model::Draw，资源解析和逐网格绘制下沉到辅助类。
+// 观察重点：Mesh::Draw 按 texture_diffuse1 等命名连接材质纹理和 sampler；本示例 Shader 只显示第一张 diffuse。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -70,6 +75,7 @@ int main()
     }
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
+    // 该全局开关必须在 Model 构造前设置，因为构造过程会立即加载材质纹理。
     stbi_set_flip_vertically_on_load(true);
 
     // configure global opengl state
@@ -78,10 +84,12 @@ int main()
 
     // build and compile shaders
     // -------------------------
+    // Shader 先建立属性位置与 texture_diffuse1 采样约定，随后所有导入 Mesh 共用该程序。
     Shader ourShader("1.model_loading.vs", "1.model_loading.fs");
 
     // load models
     // -----------
+    // Model 构造会触发完整导入：Assimp 读取场景，递归节点，提取顶点/索引/材质并为每个 Mesh 创建缓冲。
     Model ourModel(FileSystem::getPath("resources/objects/backpack/backpack.obj"));
 
     
@@ -108,6 +116,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // don't forget to enable shader before setting uniforms
+        // Mesh::Draw 设置 sampler 和发出 draw call 前，目标 Shader 程序必须已成为当前程序。
         ourShader.use();
 
         // view/projection transformations
@@ -117,10 +126,12 @@ int main()
         ourShader.setMat4("view", view);
 
         // render the loaded model
+        // model/view/projection 属于场景级变换；导入模型内部每个 Mesh 都复用这三个 uniform。
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
+        // Model::Draw 遍历 meshes；每个 Mesh 绑定 texture_diffuseN 等材质纹理、VAO/EBO，再执行 glDrawElements。
         ourModel.Draw(ourShader);
 
 

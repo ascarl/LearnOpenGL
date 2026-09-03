@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在漫反射贴图之外加入镜面贴图，让不同纹素拥有不同的高光反射率。
+// 核心流程：CPU 分别加载 diffuse/specular 纹理，绑定纹理单元 0/1，并把两个 sampler uniform 固定映射到对应单元。
+// 本节新增：片段 Shader 用 specularMap 调制高光，金属边缘与木质区域因此可产生不同反射。
+// 观察重点：纹理对象 ID、活动纹理单元和 sampler 整数三者必须匹配，绑定次序本身不等于采样器编号。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -84,6 +89,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // position、normal、uv 交错存储；两张材质贴图共享同一套 UV，不需要新增顶点属性。
     float vertices[] = {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -141,6 +147,7 @@ int main()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // 属性 location 2 的两个 float 与顶点 Shader 的 aTexCoords 对齐。
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
@@ -157,11 +164,13 @@ int main()
     // load textures (we now use a utility function to keep the code more organized)
     // -----------------------------------------------------------------------------
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/container2.png").c_str());
+    // 镜面贴图与漫反射贴图是两个独立纹理对象，但在片段阶段使用同一 TexCoords 采样。
     unsigned int specularMap = loadTexture(FileSystem::getPath("resources/textures/container2_specular.png").c_str());
 
     // shader configuration
     // --------------------
     lightingShader.use();
+    // 采样器到纹理单元的映射只需设置一次；每帧仍要确保对应单元绑定正确纹理对象。
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
@@ -209,6 +218,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // bind diffuse map
+        // 单元 0/1 同时保持绑定，片段 Shader 才能在一次绘制中访问两张贴图。
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         // bind specular map
@@ -315,6 +325,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // 先在 CPU 端解码像素与通道数，再据此选择 GL_RED、GL_RGB 或 GL_RGBA。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
@@ -327,6 +338,7 @@ unsigned int loadTexture(char const * path)
             format = GL_RGBA;
 
         glBindTexture(GL_TEXTURE_2D, textureID);
+        // 上传基础级并生成 mipmap；缩小时由 GL_LINEAR_MIPMAP_LINEAR 选择相邻级别。
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 

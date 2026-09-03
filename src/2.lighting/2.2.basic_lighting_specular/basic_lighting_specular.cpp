@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在环境光和漫反射上增加 Phong 镜面反射，并正确处理模型变换后的法线。
+// 核心流程：CPU 上传 lightPos、camera.Position 与 MVP，片段 Shader 在世界空间比较反射方向和观察方向。
+// 本节新增：viewPos 让高光依赖观察者位置，顶点 Shader 使用 model 逆转置矩阵保持法线正确。
+// 观察重点：移动相机时高光会沿表面移动；shininess 指数决定高光范围，而非总体亮度。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -82,6 +87,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 顶点位置和法线交错存储；法线在顶点 Shader 中由逆转置 model 矩阵变换到世界空间。
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -139,6 +145,7 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // normal attribute
+    // location 1 的偏移为 3 个 float，步长仍覆盖完整的位置+法线记录。
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
@@ -178,6 +185,7 @@ int main()
         lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         lightingShader.setVec3("lightPos", lightPos);
+        // 镜面项依赖观察方向，因此把 Camera 的世界空间位置与 lightPos 一并传入。
         lightingShader.setVec3("viewPos", camera.Position);
 
         // view/projection transformations
@@ -191,6 +199,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // render the cube
+        // 顶点阶段只准备几何量，光栅化后每个片段独立计算高光，边缘比 Gouraud 着色更平滑。
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把有限位置光源替换为方向光，模拟太阳等距离足够远、光线近似平行的光源。
+// 核心流程：CPU 上传统一 light.direction 和材质贴图，循环为十个立方体设置不同 model 后重复绘制。
+// 本节新增：光照不依赖 lightPos 或片段到光源的距离，因此没有衰减，也不绘制灯立方体标记。
+// 观察重点：Shader 中使用 -direction 构造“片段指向光源”的向量；场景各处接收相同入射方向。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -126,6 +131,7 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
     };
     // positions all containers
+    // 十个物体共享一份 VAO/VBO 和材质纹理，仅通过逐次更新 model 矩阵实现实例位置与朝向差异。
     glm::vec3 cubePositions[] = {
         glm::vec3( 0.0f,  0.0f,  0.0f),
         glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -166,6 +172,7 @@ int main()
 
     // load textures (we now use a utility function to keep the code more organized)
     // -----------------------------------------------------------------------------
+    // diffuse/specular 两张贴图分别绑定单元 0/1，之后所有立方体绘制都复用这些绑定。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/container2.png").c_str());
     unsigned int specularMap = loadTexture(FileSystem::getPath("resources/textures/container2_specular.png").c_str());
 
@@ -197,6 +204,7 @@ int main()
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
+        // 方向光只需要方向；该向量表示光传播方向，片段 Shader 会取反得到指向光源的方向。
         lightingShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
         lightingShader.setVec3("viewPos", camera.Position);
 
@@ -231,6 +239,7 @@ int main()
 
         // render containers
         glBindVertexArray(cubeVAO);
+        // 每轮更新 model 后立即 draw，同一方向光在所有对象位置保持平行且不衰减。
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -245,6 +254,7 @@ int main()
 
 
         // a lamp object is weird when we only have a directional light, don't render the light object
+        // 方向光可视为来自无限远，有限位置的立方体会给出错误空间暗示，所以绘制代码保留但禁用。
         // lightCubeShader.use();
         // lightCubeShader.setMat4("projection", projection);
         // lightCubeShader.setMat4("view", view);
@@ -339,6 +349,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // CPU 解码结果的通道数决定 GPU 上传格式；成功上传后原始像素即可释放。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {

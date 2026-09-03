@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在漫反射和镜面贴图基础上增加 emission 贴图，表现不依赖入射光的自发光区域。
+// 核心流程：三张纹理绑定到单元 0/1/2，Shader 分别采样 material.diffuse/specular/emission 后组合输出。
+// 本练习新增：matrix.jpg 作为自发光颜色直接加入 Phong 三项结果；它不会自动成为照亮其他物体的光源。
+// 观察重点：即使表面背光，自发光纹素仍可见；这是材质输出项而非全局光照或 Bloom。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -84,6 +89,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 三张贴图都复用 position(3)+normal(3)+uv(2) 的 8-float 顶点记录。
     float vertices[] = {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -141,6 +147,7 @@ int main()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // location 2 只存一套 UV，片段 Shader 用它采样所有材质纹理。
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
@@ -158,6 +165,7 @@ int main()
     // -----------------------------------------------------------------------------
     unsigned int diffuseMap  = loadTexture(FileSystem::getPath("resources/textures/container2.png").c_str());
     unsigned int specularMap = loadTexture(FileSystem::getPath("resources/textures/container2_specular.png").c_str());
+    // matrix.jpg 的亮色纹素将在片段 Shader 中作为不受光照方向影响的 emission 项。
     unsigned int emissionMap = loadTexture(FileSystem::getPath("resources/textures/matrix.jpg").c_str());
 
     // shader configuration
@@ -165,6 +173,7 @@ int main()
     lightingShader.use();
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
+    // 三个 sampler 分别映射到固定纹理单元，避免把 texture ID 误当作 sampler 值。
     lightingShader.setInt("material.emission", 2);
 
 
@@ -217,6 +226,7 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
         // bind emission map
+        // 自发光纹理也必须在 draw 前绑定；“自发光”是 Shader 组合语义，不是特殊 OpenGL 纹理类型。
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, emissionMap);
 
@@ -321,6 +331,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // stb_image 负责文件格式解码，OpenGL 只接收解码后的宽高、格式和连续像素数据。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
@@ -333,6 +344,7 @@ unsigned int loadTexture(char const * path)
             format = GL_RGBA;
 
         glBindTexture(GL_TEXTURE_2D, textureID);
+        // 像素上传和 mipmap 生成完成后，GPU 纹理不再依赖 data 的 CPU 生命周期。
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 

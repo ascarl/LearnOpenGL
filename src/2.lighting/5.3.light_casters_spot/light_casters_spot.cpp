@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把点光源约束到相机朝向的锥体内，形成边缘清晰的手电筒聚光效果。
+// 核心流程：每帧把 camera.Position/Front 上传为光源位置/方向，并以截止角余弦判断片段是否在光锥内。
+// 本节新增：光锥内计算直接光与距离衰减，光锥外只保留环境项；硬阈值会形成明显边缘。
+// 观察重点：cutOff 保存的是 cos(angle)，角度越小余弦越大，所以 Shader 使用大于比较。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -126,6 +131,7 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
     };
     // positions all containers
+    // 十个立方体分布在视锥中，用于观察相机手电筒光锥的覆盖范围。
     glm::vec3 cubePositions[] = {
         glm::vec3( 0.0f,  0.0f,  0.0f),
         glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -172,6 +178,7 @@ int main()
     // shader configuration
     // --------------------
     lightingShader.use();
+    // 材质采样器与纹理单元 0/1 的契约独立于光源类型，可直接沿用点光源示例。
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
@@ -197,8 +204,10 @@ int main()
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
+        // 位置和方向逐帧跟随 Camera，使聚光灯与第一人称视线完全同步。
         lightingShader.setVec3("light.position", camera.Position);
         lightingShader.setVec3("light.direction", camera.Front);
+        // CPU 预先计算截止角余弦，GPU 只需用点积结果比较，避免逐片段角度转换。
         lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
         lightingShader.setVec3("viewPos", camera.Position);
 
@@ -234,6 +243,7 @@ int main()
 
         // render containers
         glBindVertexArray(cubeVAO);
+        // 每个 draw 只替换 model；相机绑定的聚光参数对本帧所有物体相同。
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -248,6 +258,7 @@ int main()
 
 
         // again, a lamp object is weird when we only have a spot light, don't render the light object
+        // 手电筒与相机同位且有方向，单个灯立方体既会遮挡视线，也无法显示锥形范围，因此不绘制。
         // lightCubeShader.use();
         // lightCubeShader.setMat4("projection", projection);
         // lightCubeShader.setMat4("view", view);
@@ -342,6 +353,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // 根据解码后的通道数量选择 OpenGL 像素格式，然后上传基础级并生成 mipmap。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {

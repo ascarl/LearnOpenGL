@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把 Phong 光照移到顶点阶段形成 Gouraud 着色，并与逐片段计算的视觉质量比较。
+// 核心流程：顶点 Shader 计算 LightingColor，光栅化器在三角形内部插值，片段 Shader 只乘 objectColor 后输出。
+// 本练习新增：减少逐片段计算成本，但稀疏顶点无法捕获狭窄高光，插值还可能在三角形边界形成条带。
+// 观察重点：本文件是两阶段 Shader 与结果说明的参考答案，不是可直接构建的 C++ 程序。
 // Vertex shader:
 // ================
 #version 330 core
@@ -20,6 +25,7 @@ void main()
     
     // gouraud shading
     // ------------------------
+    // 与逐片段 Phong 不同，下面整套光照公式每个顶点只执行一次。
     vec3 Position = vec3(model * vec4(aPos, 1.0));
     vec3 Normal = mat3(transpose(inverse(model))) * aNormal;
     
@@ -40,6 +46,7 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * lightColor;      
 
+    // 光栅化器会在三角形内部插值这个顶点颜色，狭窄高光可能在顶点间被漏掉或失真。
     LightingColor = ambient + diffuse + specular;
 }
 
@@ -55,6 +62,7 @@ uniform vec3 objectColor;
 
 void main()
 {
+   // 片段阶段不再重算法线和方向，只消费插值后的 LightingColor。
    FragColor = vec4(LightingColor * objectColor, 1.0);
 }
 

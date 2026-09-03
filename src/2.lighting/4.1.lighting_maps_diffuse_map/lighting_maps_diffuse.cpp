@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用漫反射贴图按纹素描述物体颜色，让单个网格表面拥有细节丰富的材质响应。
+// 核心流程：VBO 新增 UV 属性，stb_image 解码 container2.png 并由 OpenGL 上传，纹理单元 0 与采样器建立契约。
+// 本节新增：环境项和漫反射项从 diffuse 纹理取色，镜面反射仍使用统一的 vec3 系数。
+// 观察重点：VAO 中位置/法线/UV 的步长与偏移必须和 Shader 的 location 0/1/2 精确一致。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -84,6 +89,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 每个顶点为 position(3)+normal(3)+uv(2)，8-float 步长必须与三个属性指针完全一致。
     float vertices[] = {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -141,6 +147,7 @@ int main()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // UV 从第 7 个 float 开始，插值后用于在二维漫反射贴图中定位纹素。
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
@@ -156,11 +163,13 @@ int main()
 
     // load textures (we now use a utility function to keep the code more organized)
     // -----------------------------------------------------------------------------
+    // loadTexture 完成“磁盘像素 -> CPU 内存 -> GPU 纹理对象”，返回的 ID 之后绑定到纹理单元。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/container2.png").c_str());
 
     // shader configuration
     // --------------------
     lightingShader.use(); 
+    // sampler uniform 保存的是纹理单元编号 0，而不是 OpenGL 纹理对象 ID。
     lightingShader.setInt("material.diffuse", 0);
 
 
@@ -208,6 +217,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // bind diffuse map
+        // draw 前激活单元 0 并绑定 diffuseMap，满足初始化时建立的 sampler 契约。
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
@@ -312,6 +322,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
     
     int width, height, nrComponents;
+    // stb_image 在 CPU 端解码文件；通道数决定上传给 OpenGL 的像素格式。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
@@ -324,6 +335,7 @@ unsigned int loadTexture(char const * path)
             format = GL_RGBA;
 
         glBindTexture(GL_TEXTURE_2D, textureID);
+        // glTexImage2D 把解码像素复制到当前纹理对象，生成 mipmap 后 CPU 数据即可释放。
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 

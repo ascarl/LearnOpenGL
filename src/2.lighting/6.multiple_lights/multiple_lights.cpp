@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在同一场景组合一盏方向光、四盏点光源和一盏随相机移动的软边聚光灯。
+// 核心流程：CPU 按 GLSL 结构体/数组名称上传全部灯参数，片段 Shader 分类型计算并线性累加每盏灯贡献。
+// 本节新增：多光源共享材质纹理、世界空间位置/法线和观察方向；四个点光源另用灯立方体显示位置。
+// 观察重点：CPU 的 pointLights[0..3] 数量必须与 Shader 常量一致，遗漏字段会保留默认零值并改变结果。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -142,6 +147,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     // positions of the point lights
+    // 该数组下标是 CPU/GPU 契约的一部分：位置 [i] 必须上传到 GLSL 的 pointLights[i]。
     glm::vec3 pointLightPositions[] = {
         glm::vec3( 0.7f,  0.2f,  2.0f),
         glm::vec3( 2.3f, -3.3f, -4.0f),
@@ -182,6 +188,7 @@ int main()
     // shader configuration
     // --------------------
     lightingShader.use();
+    // 所有光源共享同一 Material，diffuse/specular 采样器分别固定到纹理单元 0/1。
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
@@ -217,11 +224,13 @@ int main()
            by using 'Uniform buffer objects', but that is something we'll discuss in the 'Advanced GLSL' tutorial.
         */
         // directional light
+        // uniform 名包含结构体字段路径；字符串必须与 GLSL 声明完全一致，否则该字段不会收到数据。
         lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
         lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
         lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
         // point light 1
+        // 四个点光源各自拥有位置、三类光强与衰减系数，片段 Shader 会逐个调用同一计算函数。
         lightingShader.setVec3("pointLights[0].position", pointLightPositions[0]);
         lightingShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
         lightingShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
@@ -254,6 +263,7 @@ int main()
         lightingShader.setFloat("pointLights[3].linear", 0.09f);
         lightingShader.setFloat("pointLights[3].quadratic", 0.032f);
         // spotLight
+        // 聚光灯的位置和方向每帧来自 Camera，形成叠加在其他五盏灯之上的手电筒贡献。
         lightingShader.setVec3("spotLight.position", camera.Position);
         lightingShader.setVec3("spotLight.direction", camera.Front);
         lightingShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -276,6 +286,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // bind diffuse map
+        // 两张材质贴图只绑定一次即可服务本帧十个物体的所有光源计算。
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         // bind specular map
@@ -284,6 +295,7 @@ int main()
 
         // render containers
         glBindVertexArray(cubeVAO);
+        // 每个 draw 更新 model；光源数组保持不变，GPU 会为每个片段累计六盏灯的结果。
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
@@ -302,6 +314,7 @@ int main()
          lightCubeShader.setMat4("view", view);
     
          // we now draw as many light bulbs as we have point lights.
+         // 只有四个点光源具有固定位置可视标记；方向光和相机聚光灯不在此循环绘制。
          glBindVertexArray(lightCubeVAO);
          for (unsigned int i = 0; i < 4; i++)
          {
@@ -395,6 +408,7 @@ unsigned int loadTexture(char const * path)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // CPU 解码、GPU 上传与 CPU 缓冲释放构成一次纹理资源创建；返回值供后续纹理单元绑定。
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把位置、法线与光源统一变换到观察空间，在该空间完成完整 Phong 光照。
+// 核心流程：顶点阶段用 view*model 生成 FragPos/Normal/LightPos，片段阶段利用相机位于观察空间原点的性质求 viewDir。
+// 本练习新增：光照坐标系从世界空间切换到观察空间，所有参与点积和向量相减的量必须同步切换。
+// 观察重点：本文件并列保存顶点/片段 Shader 参考代码，不是可直接编译的 C++ 源文件。
 // Vertex shader:
 // ================
 #version 330 core
@@ -17,6 +22,7 @@ uniform mat4 projection;
 void main()
 {
     gl_Position = projection * view * model * vec4(aPos, 1.0);
+    // 位置和法线都进入观察空间；法线矩阵必须基于 view*model，而不能只变换位置。
     FragPos = vec3(view * model * vec4(aPos, 1.0));
     Normal = mat3(transpose(inverse(view * model))) * aNormal;
     LightPos = vec3(view * vec4(lightPos, 1.0)); // Transform world-space light position to view-space light position
@@ -49,6 +55,7 @@ void main()
     
     // specular
     float specularStrength = 0.5;
+    // 观察空间中相机恒在原点，因此无需额外 viewPos uniform，-FragPos 就是片段指向相机的方向。
     vec3 viewDir = normalize(-FragPos); // the viewer is always at (0,0,0) in view-space, so viewDir is (0,0,0) - Position => -Position
     vec3 reflectDir = reflect(-lightDir, norm);  
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);

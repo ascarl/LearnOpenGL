@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在颜色示例上加入顶点法线，以环境光和 Lambert 漫反射表现表面朝向。
+// 核心流程：VBO 交错存储位置/法线，主 Shader 接收世界空间 lightPos，灯 Shader 单独绘制位置标记。
+// 本节新增：片段亮度由法线与入射方向点积决定；当前模型矩阵为单位矩阵，法线尚未用逆转置矩阵变换。
+// 观察重点：朝向光源的面更亮，背光面只剩环境项；法线是方向而不是可直接显示的颜色。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -82,6 +87,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 每个顶点由位置 xyz 和法线 xyz 组成；每个立方体面使用恒定轴向法线，产生清晰的面光照。
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -139,6 +145,7 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // normal attribute
+    // location 1 从每个 6-float 记录的第 4 个 float 开始读取法线。
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
@@ -175,6 +182,7 @@ int main()
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
+        // objectColor/lightColor 定义颜色响应，世界空间 lightPos 与插值后的 FragPos 共同产生入射方向。
         lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         lightingShader.setVec3("lightPos", lightPos);
@@ -190,6 +198,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // render the cube
+        // 一次绘制提交 12 个三角形；逐片段环境光与漫反射在 GPU 中执行。
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

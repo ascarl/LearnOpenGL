@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：带距离衰减的点光源 Phong 片段着色器。
+// 输入输出：世界空间 FragPos 决定光源方向与距离，材质纹理和 Normal 决定表面反射。
+// 本节新增：用 constant + linear*d + quadratic*d² 的倒数衰减三类光照，模拟有限范围点光源。
 out vec4 FragColor;
 
 struct Material {
@@ -14,6 +18,7 @@ struct Light {
     vec3 diffuse;
     vec3 specular;
 	
+    // 三个衰减系数共同塑造光强随距离下降的曲线，二次项在远距离占主导。
     float constant;
     float linear;
     float quadratic;
@@ -46,8 +51,10 @@ void main()
     
     // attenuation
     float distance    = length(light.position - FragPos);
+    // 分母至少包含常数项，避免光源附近除零；经验系数控制有效照明半径。
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
 
+    // 本示例让环境、漫反射和镜面项都随该点光源距离衰减。
     ambient  *= attenuation;  
     diffuse   *= attenuation;
     specular *= attenuation;   

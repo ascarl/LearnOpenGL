@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Material 与 Light 分别描述表面反射属性和入射光强度，取代单一 objectColor。
+// 核心流程：CPU 每帧生成动态 lightColor，拆成环境/漫反射/镜面分量，并上传材质的对应系数与 shininess。
+// 本节新增：同一 Phong 公式通过“光源分量 × 材质分量”组合出不同外观，几何与 VAO 布局保持不变。
+// 观察重点：材质 specular 控制反射高光的颜色/强度，shininess 控制高光集中程度。
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -82,6 +87,7 @@ int main()
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
+    // 几何布局仍是位置+法线；本节变化发生在 CPU uniform 组织和片段 Shader 的材质结构中。
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -179,6 +185,7 @@ int main()
         lightingShader.setVec3("viewPos", camera.Position);
 
         // light properties
+        // 三个不同频率的正弦分量生成随时间变化的光色，再派生较弱的 diffuse 和 ambient 强度。
         glm::vec3 lightColor;
         lightColor.x = static_cast<float>(sin(glfwGetTime() * 2.0));
         lightColor.y = static_cast<float>(sin(glfwGetTime() * 0.7));
@@ -190,6 +197,7 @@ int main()
         lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         // material properties
+        // Material 的每个字段描述表面对对应光照分量的反射能力，独立于 Light 的入射强度。
         lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
         lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
         lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // specular lighting doesn't have full effect on this object's material
@@ -206,6 +214,7 @@ int main()
         lightingShader.setMat4("model", model);
 
         // render the cube
+        // 当前 model 是单位矩阵，但 Shader 的法线矩阵仍支持后续旋转或非均匀缩放。
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
