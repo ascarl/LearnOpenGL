@@ -1,9 +1,10 @@
-// LearnOpenGL 中文导读
-// 文件性质：这是 4.2 片段着色器的练习答案片段，不是独立 C++ 程序。
-// 与基础示例的精确差异：采样第二张纹理时将 U 改为 1.0-TexCoord.x，仅水平翻转笑脸；第一张纹理和 0.2 混合权重不变。
-// 观察重点：只变换一个 sampler 的采样坐标，不会翻转矩形几何或容器纹理。
-
 #version 330 core
+// LearnOpenGL 中文导读
+// 文件性质：虽然后缀为 .cpp，但内容是 4.2 片段着色器的练习答案，可作为 GLSL 源码使用。
+// 与基础示例的精确差异：第二张纹理改用 1.0-TexCoord.x 水平翻转；sampler 名也从 texture1/texture2 改为 ourTexture1/ourTexture2。
+// 接口注意：若直接沿用 4.2 C++ 对 texture1/texture2 的 uniform 设置，名称无法匹配本 Shader，两个新 sampler 不会得到预期的 0/1 单元映射。
+// 观察重点：第一张纹理与 0.2 混合权重不变，只对第二张纹理的采样坐标做水平镜像。
+
 out vec4 FragColor;
 
 in vec3 ourColor;

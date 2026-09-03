@@ -1,7 +1,8 @@
 // LearnOpenGL 中文导读
 // 练习目标：观察超出 [0,1] 的 UV 与不同环绕方式。
 // 与基础示例的精确差异：相对 4.2，把矩形 UV 扩为 0..2；容器纹理设为 GL_CLAMP_TO_EDGE，笑脸仍为 GL_REPEAT。
-// 观察重点：同一套越界 UV 会让容器边缘被拉伸，而笑脸图案重复；Shader 的双纹理混合逻辑不变。
+// 额外代码差异：awesomeface 的 GPU 内部格式由 GL_RGBA 改为 GL_RGB，源像素仍按 GL_RGBA 读取，因此上传时丢弃 alpha。
+// 观察重点：越界 UV 让容器边缘拉伸、笑脸重复；Shader 混合逻辑不变，但笑脸纹理不再保留透明通道。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

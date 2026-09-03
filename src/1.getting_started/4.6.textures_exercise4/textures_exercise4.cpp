@@ -1,7 +1,8 @@
 // LearnOpenGL 中文导读
 // 练习目标：运行时调节两张纹理的混合比例。
 // 与基础示例的精确差异：相对 4.2，用 uniform mixValue 替代固定 0.2；上下方向键按 0.001 调节并钳制到 [0,1]。
-// 观察重点：每帧绘制前上传 mixValue，sampler 到纹理单元 0/1 的映射保持不变。
+// 额外代码差异：awesomeface 的 GPU 内部格式由 GL_RGBA 改为 GL_RGB，源像素仍按 GL_RGBA 读取，因此上传时丢弃 alpha。
+// 观察重点：每帧上传 mixValue，sampler 到单元 0/1 的映射不变；笑脸纹理不再保留透明通道。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
