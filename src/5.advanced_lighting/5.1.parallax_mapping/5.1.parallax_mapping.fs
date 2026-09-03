@@ -1,6 +1,6 @@
 #version 330 core
 // LearnOpenGL 中文导读
-// 着色阶段：基本视差贴图片段着色器，先偏移 UV，再以同一坐标采样颜色、法线和高度。
+// 着色阶段：基本视差贴图先以原始 UV 采样高度并计算偏移，再用偏移后的 UV 采样颜色与法线。
 // 输入输出：depthMap.r 是归一化高度，heightScale 控制虚拟凹凸幅度，viewDir 位于切线空间。
 // 核心算法：UV'=UV-viewDir.xy*height*scale；一次近似没有除以 viewDir.z，斜视角下误差较明显。
 out vec4 FragColor;

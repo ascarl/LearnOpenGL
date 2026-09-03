@@ -134,7 +134,7 @@ void main()
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
     
-    // 漫反射 IBL 用世界空间 N 查询低频辐照度，表示整个入射半球的余弦加权能量。
+    // irradianceMap 保存世界空间 N 方向的 Lambert 归一化漫反射卷积 E/π；下行直接乘 albedo，不再除以 PI。
     vec3 irradiance = texture(irradianceMap, N).rgb;
     vec3 diffuse      = irradiance * albedo;
     

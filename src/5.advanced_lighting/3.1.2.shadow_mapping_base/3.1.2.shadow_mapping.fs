@@ -30,7 +30,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
     // check whether current frag pos is in shadow
-    // 两个深度都位于光源纹理的 [0,1] 范围；1 表示当前表面被更靠近光源的表面遮挡。
+    // shadowMap 样本深度在 [0,1]；projCoords.z 仅在片元位于光源裁剪体内时同范围，本基础版尚未保护 z<0、z>1 等视锥外情况。
     float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
 
     return shadow;

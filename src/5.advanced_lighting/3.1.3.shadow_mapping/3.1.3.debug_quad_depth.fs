@@ -1,7 +1,7 @@
 #version 330 core
 // LearnOpenGL 中文导读
 // 着色阶段：调试片段着色器，把方向光深度纹理转换为灰度输出。
-// 输入输出：depthMap 来自光源视角深度 Pass，TexCoords 是屏幕四边形坐标；near/far 描述光源裁剪范围。
+// 输入输出：depthMap 来自光源视角深度 Pass，TexCoords 是屏幕四边形坐标；near/far 仅供下方已注释的透视深度线性化路径。
 // 核心算法：正交投影下深度本就与距离线性对应；灰度值用于检查覆盖范围、精度与深度附件内容。
 out vec4 FragColor;
 

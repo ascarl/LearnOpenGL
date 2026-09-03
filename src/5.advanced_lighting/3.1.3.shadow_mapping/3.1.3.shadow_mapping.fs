@@ -37,7 +37,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
     // PCF
     float shadow = 0.0;
-    // texelSize 把整数邻域偏移换成纹理坐标；九次二值比较的均值近似面积光可见比例。
+    // texelSize 把整数邻域偏移换成纹理坐标；九次二值比较取平均得到核内遮挡比例（1-shadow 为 PCF 可见度），只平滑边缘而未采样有限面积光源。
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     for(int x = -1; x <= 1; ++x)
     {

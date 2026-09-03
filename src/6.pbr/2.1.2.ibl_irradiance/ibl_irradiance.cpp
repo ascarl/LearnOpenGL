@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
-// 学习目标：将 HDR 环境的半球入射光卷积为低频辐照度 Cubemap，为 PBR 漫反射 IBL 提供间接光。
-// 核心流程：先转换环境 Cubemap，再逐面卷积写 irradianceMap，运行期用 N 查询该图并乘以漫反射反照率。
-// Pass 依赖：irradianceMap 依赖 envCubemap；其值近似法线方向半球上的 radiance*cos(theta) 积分。
+// 学习目标：将 HDR 环境卷积为低频、含 Lambert 1/π 归一化的漫反射 Cubemap，为 PBR 间接光提供 E/π。
+// 核心流程：先转换环境 Cubemap，再逐面卷积写 irradianceMap，运行期用 N 查询 E/π 并直接乘漫反射反照率。
+// Pass 依赖：irradianceMap 依赖 envCubemap；其值近似 (1/π)∫Ω Li*cosθ dω，而非物理辐照度 E。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

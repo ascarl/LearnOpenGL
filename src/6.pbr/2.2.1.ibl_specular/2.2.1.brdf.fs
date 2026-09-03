@@ -2,7 +2,7 @@
 // LearnOpenGL 中文导读
 // 着色阶段：Split-Sum 的 BRDF 积分片段着色器，预计算与环境内容无关的二维响应。
 // 输入输出：以 NdotV 和 roughness 为坐标，FragColor.rg 保存 Fresnel 分解系数 A/B。
-// 核心算法：在切线空间令 N=(0,0,1)，用 GGX/Hammersley 积分 G_Vis 与 Schlick Fc；运行期以 F*A+B 重建镜面因子。
+// 核心算法：在切线空间令 N=(0,0,1)，用 GGX/Hammersley 积分 A/B；标准推导为 F0*A+B，本项目运行时以 roughness-aware F 代入 F*A+B。
 out vec2 FragColor;
 in vec2 TexCoords;
 
@@ -103,7 +103,7 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
             float G_Vis = (G * VdotH) / (NdotH * NdotV);
             float Fc = pow(1.0 - VdotH, 5.0);
 
-            // A/B 分别累计 Schlick Fresnel 中乘 F0 的缩放项和独立偏移项，运行期以 F0*A+B 重组。
+            // A/B 按标准 Schlick 推导分别累计 F0 的缩放与偏移项，即 F0*A+B；当前 PBR Shader 运行时改用 roughness-aware F。
             A += (1.0 - Fc) * G_Vis;
             B += Fc * G_Vis;
         }

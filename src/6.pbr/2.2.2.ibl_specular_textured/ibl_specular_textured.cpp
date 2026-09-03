@@ -305,7 +305,7 @@ int main()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // be sure to set minification filter to mip_linear 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // generate mipmaps for the cubemap so OpenGL automatically allocates the required memory.
-    // 128×128 的 mip 0 已由 glTexImage2D 分配；这里以普通下采样生成 mip 1-7，形成 8 级 mip 链。
+    // mip 0 由 nullptr 仅分配存储、纹素未指定；glGenerateMipmap 据此建立 mip 1-7，但这些生成内容没有可依赖的图像语义。
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     // pbr: run a quasi monte-carlo simulation on the environment lighting to create a prefilter (cube)map.
@@ -327,7 +327,7 @@ int main()
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
         glViewport(0, 0, mipWidth, mipHeight);
 
-        // 循环仅按 roughness 重写 mip 0-4；MAX_REFLECTION_LOD=4，因此 mip 5-7 保留自动结果且不会被本流程采样。
+        // 下方 prefilter Pass 将有意义的积分结果写入 mip 0-4；mip 5-7 仍未指定，且 MAX_REFLECTION_LOD=4 不会采样。
         float roughness = (float)mip / (float)(maxMipLevels - 1);
         prefilterShader.setFloat("roughness", roughness);
         for (unsigned int i = 0; i < 6; ++i)

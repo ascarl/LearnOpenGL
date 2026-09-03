@@ -2,7 +2,7 @@
 // LearnOpenGL 中文导读
 // 着色阶段：PBR 片段着色器，在世界空间计算 metallic/roughness 工作流的直接光与当前阶段的环境项。
 // 输入输出：albedo、metallic、roughness、AO 为 uniform；metallic 决定介电 F0 与金属 albedo 的混合，roughness 描述微表面方向分布宽度。
-// 核心算法：直接光使用 Cook-Torrance；环境漫反射为 irradiance(N)*albedo/π 的等价拆分，AO 只缩放环境贡献。
+// 核心算法：直接光使用 Cook-Torrance；irradianceMap 已存 E/π，环境漫反射直接计算 kD*(E/π)*albedo，AO 只缩放环境贡献。
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
@@ -124,7 +124,7 @@ void main()
     vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
-    // 以世界空间法线 N 查询的 irradiance 已积分半球入射 radiance*cos(theta)，代表漫反射照明强度。
+    // irradianceMap 保存以世界空间 N 查询的 Lambert 归一化卷积 E/π；因此下行直接乘 albedo，无需再次除以 PI。
     vec3 irradiance = texture(irradianceMap, N).rgb;
     vec3 diffuse      = irradiance * albedo;
     // AO 只缩放间接环境项；Lo 中显式点光源的可见性不由这张 AO 图表达。

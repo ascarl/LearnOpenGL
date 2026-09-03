@@ -1,6 +1,6 @@
 #version 330 core
 // LearnOpenGL 中文导读
-// 着色阶段：片段着色器，对四个点光源在线性空间累加漫反射，再按 gamma 开关编码显示。
+// 着色阶段：片段着色器，对四个点光源累加 Blinn-Phong 漫反射与镜面高光，并对 gamma 路径采用平方反比衰减和显示编码。
 // 输入输出：floorTexture 在启用路径中由 GL_SRGB 自动解码；lightPositions/lightColors 与 FragPos/Normal 均为世界空间数据。
 // 核心算法：线性光照采用 1/d² 衰减，最终 pow(color,1/2.2) 是显示编码；不能在 sRGB 数值上直接做光照积分。
 out vec4 FragColor;
