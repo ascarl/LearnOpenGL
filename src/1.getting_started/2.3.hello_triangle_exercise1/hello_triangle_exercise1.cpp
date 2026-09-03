@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：用一次绘制调用输出两个相邻三角形。
+// 与基础示例的精确差异：相对 2.1，将同一 VBO 扩为 6 个顶点，并把 glDrawArrays 的 count 从 3 改为 6。
+// 观察重点：两个三角形共用一个 VAO、一个 VBO 和一个 Shader Program。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -60,6 +65,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // 两个三角形仍共享同一套已编译并链接的 Shader Program。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -112,6 +118,7 @@ int main()
     }; 
 
     unsigned int VBO, VAO;
+    // 单个 VAO/VBO 描述连续排列的六个顶点，不需要 EBO 或第二组对象。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -136,6 +143,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：一次 glDrawArrays 连续消费六个顶点，GL_TRIANGLES 每三个顶点形成一个图元。
     while (!glfwWindowShouldClose(window))
     {
         // input

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：观察超出 [0,1] 的 UV 与不同环绕方式。
+// 与基础示例的精确差异：相对 4.2，把矩形 UV 扩为 0..2；容器纹理设为 GL_CLAMP_TO_EDGE，笑脸仍为 GL_REPEAT。
+// 观察重点：同一套越界 UV 会让容器边缘被拉伸，而笑脸图案重复；Shader 的双纹理混合逻辑不变。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -65,6 +70,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 同时记住交错 VBO 的三个属性和 EBO；UV=0..2 会在光栅化后继续产生越界采样坐标。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -108,6 +114,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理上传：容器图以 RGB 存储，后续越界采样由 GL_CLAMP_TO_EDGE 状态处理。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -131,6 +138,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // PNG 输入按 RGBA 读取，但 GPU 内部格式指定为 RGB，因此透明度不会保存在纹理对象中。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -144,6 +152,7 @@ int main()
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
+    // sampler 仍映射到单元 0/1；两张纹理对同一越界 UV 应用各自的环绕状态。
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
@@ -151,6 +160,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：单元 0 绑定钳制的容器，单元 1 绑定重复的笑脸，再一次性绘制索引矩形。
     while (!glfwWindowShouldClose(window))
     {
         // input

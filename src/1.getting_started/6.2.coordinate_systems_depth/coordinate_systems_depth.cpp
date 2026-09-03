@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在坐标系统示例上启用深度测试，正确处理立方体前后表面的遮挡。
+// 核心流程：创建 3D 立方体与 MVP 矩阵，开启 GL_DEPTH_TEST，每帧同时清除颜色和深度缓冲。
+// 观察重点：相对 6.1，深度缓冲让离相机更近的片段通过测试并遮挡后方片段。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -53,6 +58,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度状态：启用后每个片段会与深度缓冲比较；默认较小深度通过并更新缓冲。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -105,6 +111,7 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
     unsigned int VBO, VAO;
+    // VAO 记录 position/UV 对 VBO 的读取方式；36 个顶点已按六个面展开，因此无需 EBO。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -140,6 +147,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // texture1 接收 RGB 容器像素，GPU 复制完成后 CPU 解码内存可独立释放。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -163,6 +171,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // texture2 以 RGBA 源布局读取，内部 RGB 保存颜色通道；纹理对象仍绑定在单元 1 使用。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -175,12 +184,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler→单元映射只设置一次；它们不保存 texture1/texture2 对象 ID。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：每帧必须同时清颜色和深度，否则上一帧深度会错误遮挡当前帧。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -190,6 +201,7 @@ int main()
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // 清除 GL_DEPTH_BUFFER_BIT 将深度恢复为默认远值，为本帧遮挡测试重新起步。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
 
         // bind textures on corresponding texture units
@@ -202,6 +214,7 @@ int main()
         ourShader.use();
 
         // create transformations
+        // MVP 数据流：局部顶点先经 Model，再经 View，最后由 Projection 写入裁剪空间。
         glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         glm::mat4 view          = glm::mat4(1.0f);
         glm::mat4 projection    = glm::mat4(1.0f);
@@ -212,6 +225,7 @@ int main()
         unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
         unsigned int viewLoc  = glGetUniformLocation(ourShader.ID, "view");
         // pass them to the shaders (3 different ways)
+        // 上传的三张矩阵在顶点 Shader 中按 P*V*M*position 使用，代码调用顺序不等于数学作用顺序。
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
         // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.

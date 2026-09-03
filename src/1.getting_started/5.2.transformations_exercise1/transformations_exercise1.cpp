@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 文件性质：这是 5.1 渲染循环中的矩阵组合练习答案，不是独立 C++ 程序。
+// 与基础示例的精确差异：调用顺序改为先 rotate、后 translate，得到 R*T；对顶点实际先平移再绕原点旋转。
+// 观察重点：容器因此绕场景原点公转，而不是在右下角围绕自身中心旋转。
+
 int main()
 {
     [...]
@@ -6,6 +11,7 @@ int main()
         [...]        
         // create transformations
         glm::mat4 transform = glm::mat4(1.0f);
+        // 矩阵顺序：R*T 作用于列向量时先执行 T，再让已偏离原点的几何绕原点旋转。
         transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f)); // switched the order
         transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // switched the order               
         [...]

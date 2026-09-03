@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在 macOS 上创建 OpenGL 3.3 Core Profile 上下文，并通过 GLAD 装载函数入口。
+// 核心流程：初始化 GLFW → 创建窗口并设为当前上下文 → 初始化 GLAD → 进入事件循环。
+// 观察重点：本例尚未提交绘制命令；窗口尺寸回调只负责同步 OpenGL 视口。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -14,6 +19,7 @@ int main()
 {
     // glfw: initialize and configure
     // ------------------------------
+    // 关键步骤：版本与 Profile 提示必须在创建窗口前设置，macOS Core Profile 还要求 forward-compatible。
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -25,6 +31,7 @@ int main()
 
     // glfw window creation
     // --------------------
+    // 关键步骤：窗口创建成功后，还要把其 OpenGL 上下文设为当前线程的当前上下文。
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
@@ -37,6 +44,7 @@ int main()
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
+    // 关键步骤：GLAD 必须在上下文生效后加载；否则无法取得该上下文支持的 OpenGL 函数地址。
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -45,6 +53,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：持续处理输入、交换缓冲并分发事件，直到窗口收到关闭标记。
     while (!glfwWindowShouldClose(window))
     {
         // input

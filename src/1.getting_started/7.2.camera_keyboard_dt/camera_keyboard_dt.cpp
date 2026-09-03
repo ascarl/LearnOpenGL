@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 W/S/A/D 移动自由相机，并用 deltaTime 消除移动速度对帧率的依赖。
+// 核心流程：每帧计算时间差，输入函数更新 cameraPos，lookAt(cameraPos, cameraPos+cameraFront, cameraUp) 生成 View。
+// 观察重点：左右方向由 normalize(cross(front, up)) 得到；位移量统一为 speed*deltaTime。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -62,6 +67,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度测试在移动相机时持续维护前后遮挡；颜色与深度附件都要逐帧清除。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -127,6 +133,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int VBO, VAO;
+    // 一份 VAO/VBO 提供立方体位置与 UV；相机移动不会改写这份模型数据。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -162,6 +169,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // texture1 接收 RGB 像素并生成 mipmap，CPU 解码缓存随后即可释放。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -185,6 +193,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // texture2 按 RGBA 源格式读取、RGB 内部格式保存；采样器稍后通过单元 1 找到它。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -197,22 +206,26 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler→单元 0/1 的映射一次设置，渲染循环负责把实际纹理对象绑定到这些单元。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
     // pass projection matrix to shader (as projection matrix rarely changes there's no need to do this per frame)
     // -----------------------------------------------------------------------------------------------------------
+    // 固定 Projection 在循环外上传；每帧只需随 cameraPos 更新 View，顶点 Shader 计算 P*V*M。
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     ourShader.setMat4("projection", projection);
 
 
     // render loop
     // -----------
+    // 渲染循环：先更新时间差，再处理位移输入，保证本帧 View 使用最新 cameraPos。
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
         // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
+        // deltaTime 是相邻帧时间戳差；将速度乘以它可获得近似与帧率无关的每秒位移。
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
@@ -235,6 +248,7 @@ int main()
         ourShader.use();
 
         // camera/view transformation
+        // lookAt 的目标为 cameraPos+front；它把世界变到相机坐标，再由 Projection 投影。
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         ourShader.setMat4("view", view);
 
@@ -276,6 +290,7 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // 相机输入：前后沿 Front，左右沿 normalize(cross(Front, Up))，所有方向使用同一帧时间尺度。
     float cameraSpeed = static_cast<float>(2.5 * deltaTime);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;

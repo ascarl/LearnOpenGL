@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：为每个顶点增加颜色属性，并观察光栅化阶段对 varying 的线性插值。
+// 核心流程：交错 VBO 同时保存位置和颜色，顶点着色器输出颜色，片段着色器接收插值结果。
+// 观察重点：VAO 用不同 offset 描述 location 0/1；三角形内部颜色由三个顶点颜色平滑生成。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -64,6 +69,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // 链接器会核对顶点阶段 out ourColor 与片段阶段 in ourColor 的名称和类型。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -112,6 +118,7 @@ int main()
     };
 
     unsigned int VBO, VAO;
+    // 一条交错 VBO 以 6 个 float 为步长；VAO 分别记录位置 offset=0、颜色 offset=3*sizeof(float)。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -136,6 +143,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：只提交三个顶点；颜色渐变由光栅化器自动插值，无需 CPU 逐像素参与。
     while (!glfwWindowShouldClose(window))
     {
         // input

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：将局部坐标依次变换到世界、观察、裁剪空间，建立 Model/View/Projection 链路。
+// 核心流程：上传纹理矩形，CPU 构造 model、view、projection，顶点 Shader 计算 projection*view*model*position。
+// 观察重点：矩阵从右向左作用；透视除法由管线在顶点着色器之后自动完成。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -69,6 +74,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 记录 position/UV 对 VBO 的解释方式和 EBO 绑定，供索引矩形重复使用。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -108,6 +114,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理上传：RGB 像素复制到 texture1；生成 mipmap 后 CPU data 可以释放。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -131,6 +138,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // texture2 按 RGBA 源格式读取、RGB 内部格式保存；采样状态属于当前纹理对象。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -143,12 +151,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler 保存单元 0/1；每帧 glActiveTexture 后绑定的对象才是本次采样来源。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：绑定纹理、更新本帧三张矩阵、绘制索引矩形并交换缓冲。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -170,6 +180,7 @@ int main()
         ourShader.use();
       
         // create transformations
+        // MVP 数据流：Model 定义局部→世界，View 定义世界→相机，Projection 定义相机→裁剪空间。
         glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         glm::mat4 view          = glm::mat4(1.0f);
         glm::mat4 projection    = glm::mat4(1.0f);
@@ -180,6 +191,7 @@ int main()
         unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
         unsigned int viewLoc  = glGetUniformLocation(ourShader.ID, "view");
         // pass them to the shaders (3 different ways)
+        // 三个 uniform 分别上传；顶点 Shader 按 projection*view*model 从右向左作用于位置。
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
         // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.

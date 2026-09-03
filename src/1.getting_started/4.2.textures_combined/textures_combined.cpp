@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：同时绑定两张纹理到不同纹理单元，并在片段着色器中混合采样结果。
+// 核心流程：分别上传 RGB 容器图与 RGBA 笑脸图，把 sampler 映射到单元 0/1，每帧激活并绑定后绘制。
+// 观察重点：mix(..., 0.2) 表示 80% 第一张纹理与 20% 第二张纹理。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -65,6 +70,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 保存位置/颜色/UV 的解释方式以及 EBO；重绑 VAO 即恢复矩形的完整顶点输入。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -108,6 +114,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理 1：RGB 源数据上传到当前绑定的 texture1，并生成 mipmap。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -131,6 +138,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 纹理 2：PNG 的 RGBA 源格式和 GPU 内部格式都保留 alpha 通道。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -144,6 +152,7 @@ int main()
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
+    // sampler 保存的是纹理单元编号而不是纹理对象 ID：texture1→0，texture2→1。
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
@@ -152,6 +161,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：先将两个纹理对象分别装入单元 0/1，再由 Shader 的 sampler 同时访问。
     while (!glfwWindowShouldClose(window))
     {
         // input

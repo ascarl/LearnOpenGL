@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在三角形示例上引入 EBO，复用四个顶点索引绘制由两个三角形组成的矩形。
+// 核心流程：VBO 保存顶点，EBO 保存索引，VAO 同时记住顶点属性与当前元素缓冲绑定。
+// 观察重点：glDrawElements 按 6 个索引取顶点，避免为共享角点重复存储位置。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -60,6 +65,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // Shader 编译/链接路径与 2.1 相同，索引绘制只改变几何数据的取用方式。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -110,6 +116,7 @@ int main()
         1, 2, 3   // second Triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 记录顶点属性；VBO 保存四个唯一顶点；EBO 保存两个三角形的六个索引。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -119,6 +126,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+    // EBO 绑定属于当前 VAO 状态，之后重绑该 VAO 时会自动恢复这份索引来源。
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
@@ -141,6 +149,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：每帧重绑 Program/VAO；glDrawElements 会通过 VAO 中的 EBO 间接索引 VBO。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -156,6 +165,7 @@ int main()
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         //glDrawArrays(GL_TRIANGLES, 0, 6);
+        // 六个 unsigned int 索引从 EBO 偏移 0 处读取，共组装两个三角形。
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         // glBindVertexArray(0); // no need to unbind it every time 
  

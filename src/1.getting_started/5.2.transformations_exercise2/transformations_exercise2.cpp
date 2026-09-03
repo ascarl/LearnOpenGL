@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：用同一 VAO 与 Shader 连续绘制两个具有不同变换的容器。
+// 与基础示例的精确差异：相对 5.1，保留右下角旋转容器，并新增左上角随 sin(time) 同比缩放的第二次绘制。
+// 观察重点：每次 glDrawElements 前覆盖同一个 transform uniform，即可复用几何与纹理资源。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -69,6 +74,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 把共享 VBO 的位置/UV 与 EBO 绑定封装起来，两次绘制无需复制几何数据。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -108,6 +114,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理 1 上传为 RGB；生成 mipmap 后可安全释放 CPU 侧 data。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -131,6 +138,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 笑脸以 RGBA 源格式读取、RGB 内部格式保存；两次容器绘制共享同一纹理对象。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -143,12 +151,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler→纹理单元映射只初始化一次，两次绘制都从单元 0/1 采样。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：同帧内依次覆盖 transform，并在每次覆盖后立即绘制共享 VAO。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -170,6 +180,7 @@ int main()
         glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         // first container
         // ---------------
+        // 第一个矩阵为 T*R：列向量先旋转，再被放到右下角。
         transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
         transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
         // get their uniform location and set matrix (using glm::value_ptr)
@@ -183,9 +194,11 @@ int main()
         // second transformation
         // ---------------------
         transform = glm::mat4(1.0f); // reset it to identity matrix
+        // 第二个矩阵为 T*S：先按 sin(time) 缩放，再平移到左上角；负值还会翻转几何。
         transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
         float scaleAmount = static_cast<float>(sin(glfwGetTime()));
         transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+        // 覆盖同一 uniform 后，下一次 glDrawElements 使用新的矩阵而不影响第一次已提交的绘制。
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &transform[0][0]); // this time take the matrix value array's first element as its memory pointer value
 
         // now with the uniform matrix being replaced with new transformations, draw it again.

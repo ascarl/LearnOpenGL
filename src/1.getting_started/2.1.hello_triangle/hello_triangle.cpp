@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：手工编译并链接顶点/片段着色器，用 VAO 与 VBO 绘制第一个三角形。
+// 核心流程：CPU 顶点数组上传到 VBO，VAO 记录属性解释方式，Shader Program 驱动 glDrawArrays。
+// 观察重点：顶点坐标已位于 NDC；渲染循环每帧绑定程序和 VAO 后提交 3 个顶点。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -60,6 +65,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // Shader 编译：分别把源码编译成阶段对象；编译日志定位单个阶段的语法或类型错误。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -84,6 +90,7 @@ int main()
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
     // link shaders
+    // Program 链接：把顶点与片段阶段组合并校验跨阶段接口，链接后才可用于绘制。
     unsigned int shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
@@ -106,6 +113,7 @@ int main()
     }; 
 
     unsigned int VBO, VAO;
+    // VAO 记录“如何读取顶点”；VBO 持有实际字节，glVertexAttribPointer 将二者关联起来。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -130,6 +138,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：清除旧帧后选择 Program 与 VAO，再提交绘制并交换缓冲。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -144,6 +153,7 @@ int main()
         // draw our first triangle
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+        // 从 VBO 的第 0 个顶点开始顺序读取 3 个顶点，组装为一个三角形。
         glDrawArrays(GL_TRIANGLES, 0, 3);
         // glBindVertexArray(0); // no need to unbind it every time 
  

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把 Shader 文件读取、编译、链接与 Program 使用封装到 Shader 辅助类。
+// 核心流程：从独立 .vs/.fs 创建 Program，上传位置/颜色交错顶点，绑定 VAO 后绘制三角形。
+// 观察重点：渲染结果延续 3.2，变化在于着色器源码与管理逻辑从入口文件中分离。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -47,6 +52,7 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
+    // Shader 构造函数集中完成文件读取、阶段编译和 Program 链接，入口只保留资源与绘制逻辑。
     Shader ourShader("3.3.shader.vs", "3.3.shader.fs"); // you can name your shader files however you like
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -59,6 +65,7 @@ int main()
     };
 
     unsigned int VBO, VAO;
+    // VAO 将交错 VBO 中的位置和颜色分别映射到 Shader 的 location 0 与 1。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -81,6 +88,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：use() 选择封装的 Program，随后 VAO 提供匹配的顶点属性。
     while (!glfwWindowShouldClose(window))
     {
         // input

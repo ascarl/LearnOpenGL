@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：分别管理并绘制两个三角形。
+// 与基础示例的精确差异：相对 2.1，建立两组 VAO/VBO，每组保存 3 个顶点，并执行两次 glDrawArrays。
+// 观察重点：切换 VAO 即可切换该三角形的顶点缓冲与属性配置。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -60,6 +65,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // 两组几何资源仍共用同一个 Shader Program，避免重复编译相同着色器。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -110,6 +116,7 @@ int main()
         0.45f, 0.5f, 0.0f   // top 
     };
     unsigned int VBOs[2], VAOs[2];
+    // 每个 VAO 捕获其对应 VBO 的 location 0 解释方式；切换 VAO 就切换完整顶点输入状态。
     glGenVertexArrays(2, VAOs); // we can also generate multiple VAOs or buffers at the same time
     glGenBuffers(2, VBOs);
     // first triangle setup
@@ -135,6 +142,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：Program 只绑定一次，再依次绑定两套 VAO 各绘制三个顶点。
     while (!glfwWindowShouldClose(window))
     {
         // input

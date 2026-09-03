@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：加载一张图片为 2D 纹理，并用顶点纹理坐标在矩形上采样。
+// 核心流程：stb_image 解码 CPU 像素 → glTexImage2D 上传 → 生成 mipmap → sampler2D 在片段阶段取样。
+// 观察重点：VAO 的第三个属性保存 UV；EBO 复用矩形角点，默认纹理单元承载 texture1。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -65,6 +70,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 记录三个交错属性与 EBO 绑定；VBO/EBO 分别拥有顶点字节和矩形索引。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -105,6 +111,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理上传：把 stb_image 返回的 RGB CPU 像素复制到当前 GL_TEXTURE_2D，并据此生成各级 mipmap。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -117,6 +124,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：默认 sampler 值为 0；绘制前把 texture 绑定到当前活动的纹理单元 0。
     while (!glfwWindowShouldClose(window))
     {
         // input

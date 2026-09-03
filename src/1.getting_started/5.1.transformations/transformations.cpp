@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：使用 GLM 组合平移与旋转矩阵，在顶点着色器中变换纹理矩形。
+// 核心流程：CPU 每帧构造 transform 并上传 mat4，顶点阶段执行 transform * position，片段阶段混合双纹理。
+// 观察重点：GLM 在右侧追加变换，矩阵作用于列向量时按从右到左顺序生效。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -69,6 +74,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 记录 position/UV 对交错 VBO 的读取规则，并持有 EBO 关联供 glDrawElements 使用。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -108,6 +114,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理上传完成后像素已由 OpenGL 持有，stbi_image_free 只回收 CPU 解码内存。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -131,6 +138,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // RGBA 源按四通道读取，内部 RGB 格式只保存颜色；采样时 alpha 将视为 1。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -143,12 +151,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use(); 
+    // sampler uniform 保存纹理单元索引；绘制时单元 0/1 必须绑定对应纹理对象。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：双纹理资源保持复用，只在每帧更新随时间旋转的 transform。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -168,12 +178,14 @@ int main()
 
         // create transformations
         glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        // 矩阵顺序：先调用 translate 再调用 rotate 得到 T*R，列向量实际先自转、再平移到右下角。
         transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
         transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
         // get matrix's uniform location and set matrix
         ourShader.use();
         unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+        // 数据边界：把连续的 4×4 列主序矩阵上传给当前 Program，GL_FALSE 表示不转置。
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
         // render container

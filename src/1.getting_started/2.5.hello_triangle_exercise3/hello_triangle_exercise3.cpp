@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：让两个三角形使用不同片段着色器输出橙色和黄色。
+// 与基础示例的精确差异：相对 2.1，使用两组 VAO/VBO 和两个 Program；两个 Program 共享同一个顶点着色器，但分别链接橙色、黄色片段着色器。
+// 观察重点：绘制第二个三角形前必须同时切换 Program 与 VAO；本练习为简洁省略了编译/链接状态检查。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -67,6 +72,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // we skipped compile log checks this time for readability (if you do encounter issues, add the compile-checks! see previous code samples)
+    // 一个顶点阶段可附加到多个 Program；不同片段阶段决定两次绘制的最终颜色。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragmentShaderOrange = glCreateShader(GL_FRAGMENT_SHADER); // the first fragment shader that outputs the color orange
     unsigned int fragmentShaderYellow = glCreateShader(GL_FRAGMENT_SHADER); // the second fragment shader that outputs the color yellow
@@ -101,6 +107,7 @@ int main()
         0.45f, 0.5f, 0.0f   // top 
     };
     unsigned int VBOs[2], VAOs[2];
+    // 两套 VAO/VBO 分别提供左右三角形的位置；颜色差异不存于顶点数据，而来自 Program。
     glGenVertexArrays(2, VAOs); // we can also generate multiple VAOs or buffers at the same time
     glGenBuffers(2, VBOs);
     // first triangle setup
@@ -126,6 +133,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：绘制每个三角形前成对选择对应 Program 和 VAO。
     while (!glfwWindowShouldClose(window))
     {
         // input

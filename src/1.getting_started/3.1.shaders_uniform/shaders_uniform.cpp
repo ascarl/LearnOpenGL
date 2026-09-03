@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：通过 uniform 从 CPU 向片段着色器传递每帧变化的颜色。
+// 核心流程：链接 Program 后查询 ourColor 位置，用时间生成绿色分量并在绘制前上传 vec4。
+// 观察重点：uniform 对一次绘制中的所有片段一致，颜色随时间变化而非随顶点插值。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -62,6 +67,7 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // vertex shader
+    // 先分别编译两个阶段，再链接为能同时访问顶点输入和片段 uniform 的 Program。
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -108,6 +114,7 @@ int main()
     };
 
     unsigned int VBO, VAO;
+    // VAO 记录 location 0 从 VBO 读取三个 float 作为位置；本例没有逐顶点颜色。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -131,6 +138,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：ourColor 每帧随时间更新，必须在这次 glDrawArrays 前写入当前 Program。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -148,6 +156,7 @@ int main()
         // update shader uniform
         double  timeValue = glfwGetTime();
         float greenValue = static_cast<float>(sin(timeValue) / 2.0 + 0.5);
+        // uniform 位置属于已链接 Program；glUniform4f 修改当前 glUseProgram 选中的 Program 状态。
         int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
         glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 

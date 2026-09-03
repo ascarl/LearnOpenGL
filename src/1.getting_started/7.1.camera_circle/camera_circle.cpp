@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 glm::lookAt 构造观察矩阵，让相机随时间沿水平圆周环绕场景。
+// 核心流程：由 sin/cos 计算相机 x/z，lookAt 以原点为目标生成 View，再配合固定 Projection 与各对象 Model 绘制。
+// 观察重点：移动的是观察坐标系而非立方体数据；相机位置变化会影响整幅场景。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -53,6 +58,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度测试跨所有立方体绘制生效；每帧仍需清除深度缓冲以重新计算可见关系。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -118,6 +124,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int VBO, VAO;
+    // 一份 VAO/VBO 保存立方体位置和 UV，十个对象通过不同 Model 矩阵复用它。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -153,6 +160,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 容器图以 RGB 上传到 texture1；生成 mipmap 后可释放 CPU 像素。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -176,6 +184,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 笑脸按 RGBA 源格式读取、RGB 内部格式保存，并作为 texture2 供单元 1 使用。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -188,17 +197,20 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // 两个 sampler 固定映射到纹理单元 0/1；它们保存单元编号而不是 OpenGL 纹理 ID。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
     // pass projection matrix to shader (as projection matrix rarely changes there's no need to do this per frame)
     // -----------------------------------------------------------------------------------------------------------
+    // Projection 对本例固定 FOV 与窗口比例不变，可在循环外上传一次；顶点 Shader 仍按 P*V*M 组合。
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     ourShader.setMat4("projection", projection); 
 
 
     // render loop
     // -----------
+    // 渲染循环：清颜色/深度、绑定纹理、更新环绕相机 View，再逐对象更新 Model。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -220,6 +232,7 @@ int main()
         ourShader.use();
 
         // camera/view transformation
+        // 相机路径：sin/cos 生成半径 10 的 xz 圆周位置，lookAt 始终朝向世界原点。
         glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         float radius = 10.0f;
         float camX = static_cast<float>(sin(glfwGetTime()) * radius);
@@ -262,6 +275,7 @@ int main()
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window)
 {
+    // 本例没有键盘相机移动；相机由渲染循环中的时间参数自动环绕，输入仅处理退出。
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 练习目标：运行时调节两张纹理的混合比例。
+// 与基础示例的精确差异：相对 4.2，用 uniform mixValue 替代固定 0.2；上下方向键按 0.001 调节并钳制到 [0,1]。
+// 观察重点：每帧绘制前上传 mixValue，sampler 到纹理单元 0/1 的映射保持不变。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -69,6 +74,7 @@ int main()
         1, 2, 3  // second triangle
     };
     unsigned int VBO, VAO, EBO;
+    // VAO 保存三个顶点属性与 EBO 绑定；几何布局与 4.2 保持一致，交互只影响片段混合。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -112,6 +118,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 纹理 1 的 RGB 像素被复制进当前绑定对象，释放 data 不会释放 GPU 纹理。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -135,6 +142,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 纹理 2 以 RGBA 源格式读取；内部 RGB 格式只保存其颜色通道。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -148,6 +156,7 @@ int main()
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
+    // sampler→单元 0/1 的映射固定不变，方向键只改变独立的 mixValue uniform。
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
@@ -155,6 +164,7 @@ int main()
 
     // render loop
     // -----------
+    // 渲染循环：绑定双纹理、上传当前混合比例，再提交同一索引矩形。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -173,6 +183,7 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture2);
 
         // set the texture mix value in the shader
+        // 数据边界：把 CPU 端 [0,1] 权重送入片段 Shader，作为 mix 的第三个参数。
         ourShader.setFloat("mixValue", mixValue);
 
         // render container
@@ -205,6 +216,7 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // 相机输入尚未引入；这里的上下键只调节混合权重，并显式防止越过 mix 的有效端点。
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
     {
         mixValue += 0.001f; // change this value accordingly (might be too slow or too fast based on system hardware)

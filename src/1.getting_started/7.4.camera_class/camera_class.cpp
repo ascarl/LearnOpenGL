@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：使用 Camera 辅助类封装位置、方向、速度、鼠标灵敏度与缩放状态。
+// 核心流程：GLFW 回调转发给 Camera，渲染循环读取 GetViewMatrix 与 Zoom，并将 View/Projection 上传。
+// 观察重点：相对 7.3，输入和欧拉角计算移入可复用类，入口文件只负责事件桥接与渲染。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -55,6 +60,7 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    // 输入链路：GLFW 回调只采集设备事件，随后转交 Camera 统一维护 yaw、pitch 与 Zoom。
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
@@ -71,6 +77,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度测试属于全局渲染状态，与 Camera 封装无关；每帧仍同时清颜色和深度缓冲。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -136,6 +143,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int VBO, VAO;
+    // 共享 VAO/VBO 保存立方体位置与 UV；十个 Model 和 Camera 的 View/Projection 都通过 uniform 区分。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -171,6 +179,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 容器图以 RGB 上传到 texture1；stbi_image_free 仅释放上传前的 CPU 缓存。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -194,6 +203,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 笑脸按 RGBA 源格式读取、RGB 内部格式保存，并由单元 1 对应的 sampler 访问。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -206,12 +216,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler uniform 只保存纹理单元编号 0/1；每帧的绑定把实际纹理对象放入这些槽位。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：先更新 deltaTime 与 Camera 输入，再清附件、绑定纹理并上传 P/V/M。
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -239,6 +251,7 @@ int main()
         ourShader.use();
 
         // pass projection matrix to shader (note that in this case it could change every frame)
+        // Camera::Zoom 生成 Projection，GetViewMatrix 生成 View；顶点 Shader 按 P*V*M 从右向左变换。
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
 
@@ -284,6 +297,7 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // 键盘输入桥接：窗口层识别按键，Camera 按 direction 与 deltaTime 统一更新位置。
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -311,6 +325,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
+    // 首次事件仅建立位置基准，后续相邻事件差值才表示真实鼠标位移。
     if (firstMouse)
     {
         lastX = xpos;
@@ -324,6 +339,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastX = xpos;
     lastY = ypos;
 
+    // Camera 内部负责灵敏度、pitch 限制和 Front/Right/Up 正交基更新。
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
@@ -331,5 +347,6 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+    // 滚轮增量交给 Camera 钳制 Zoom，下一帧据此重建透视投影。
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }

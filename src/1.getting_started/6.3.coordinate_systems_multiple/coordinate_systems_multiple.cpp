@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：复用一份立方体网格，以不同 Model 矩阵绘制场景中的十个实例。
+// 核心流程：View/Projection 对整帧共享；循环为每个位置构造平移与旋转 Model，上传后立即绘制。
+// 观察重点：深度测试维持实例间正确遮挡；每个对象只有 Model 矩阵不同。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -53,6 +58,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度测试对十次绘制共享，确保不同立方体及同一立方体各表面按距离正确遮挡。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -118,6 +124,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int VBO, VAO;
+    // 一份 VAO/VBO 保存 36 个展开顶点；十个对象仅复用它并改变 Model uniform。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -153,6 +160,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 第一张纹理上传为 RGB，mipmap 也存入同一 texture1 对象。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -176,6 +184,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 第二张 PNG 按 RGBA 读取、RGB 存储；CPU data 释放不影响已上传的 GPU 内容。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -188,12 +197,14 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // Shader 的两个 sampler 固定读取单元 0/1；纹理对象在每帧开始时装入对应单元。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：清除颜色/深度，设置帧级 View/Projection，再逐对象设置 Model 并绘制。
     while (!glfwWindowShouldClose(window))
     {
         // input
@@ -203,6 +214,7 @@ int main()
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // 深度缓冲属于帧级附件，必须与颜色缓冲一起清除后才能重新积累本帧最近片段。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
 
          // bind textures on corresponding texture units
@@ -215,6 +227,7 @@ int main()
         ourShader.use();
 
         // create transformations
+        // View/Projection 对十个对象相同；顶点 Shader 最终仍按 P*V*M 从右向左变换。
         glm::mat4 view          = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
         glm::mat4 projection    = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -228,6 +241,7 @@ int main()
         for (unsigned int i = 0; i < 10; i++)
         {
             // calculate the model matrix for each object and pass it to shader before drawing
+            // 每次上传新的 Model 后立即绘制，共享 VAO 中的局部顶点因此出现在不同世界位置。
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;

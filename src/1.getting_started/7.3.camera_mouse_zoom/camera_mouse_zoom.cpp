@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在键盘相机上增加鼠标环视与滚轮缩放，形成完整欧拉角自由相机。
+// 核心流程：鼠标位移更新 yaw/pitch 并重建 front，滚轮调整 FOV，键盘用 deltaTime 更新位置。
+// 观察重点：首次鼠标事件需建立基准；pitch 限制在 ±89° 以避免视线与世界上方向共线。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -60,6 +65,7 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    // 输入链路：GLFW 把鼠标位置和滚轮事件交给回调，禁用光标后可连续获得相对视角变化。
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
@@ -76,6 +82,7 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    // 深度测试让相机旋转或缩放后仍按新的观察方向正确解析立方体遮挡。
     glEnable(GL_DEPTH_TEST);
 
     // build and compile our shader zprogram
@@ -141,6 +148,7 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int VBO, VAO;
+    // VAO/VBO 只描述立方体局部位置与 UV；相机输入通过矩阵改变观察，不修改顶点缓存。
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -176,6 +184,7 @@ int main()
     unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
+    // 第一张图片以 RGB 上传到 texture1，GPU 复制后可释放 stb_image 的 CPU 内存。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -199,6 +208,7 @@ int main()
     if (data)
     {
         // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+        // 第二张图片按 RGBA 源布局读取、RGB 内部布局保存，并在纹理单元 1 上采样。
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -211,17 +221,20 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use();
+    // sampler 固定到单元 0/1；glActiveTexture 选择单元，glBindTexture 再决定该单元上的对象。
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
 
     // render loop
     // -----------
+    // 渲染循环：计算 deltaTime、消费键鼠状态、清附件，然后上传由 FOV 和相机朝向生成的 P/V。
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
         // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
+        // 时间差用于键盘位移；鼠标回调本身按事件位移更新角度，不依赖这里的帧数。
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
@@ -244,6 +257,7 @@ int main()
         ourShader.use();
 
         // pass projection matrix to shader (note that in this case it could change every frame)
+        // Projection 使用滚轮维护的 fov；View 使用鼠标维护的 cameraFront，顶点 Shader 最终按 P*V*M 计算。
         glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
 
@@ -289,6 +303,7 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // 键盘输入：沿 Front 前后移动，沿 Front×Up 的单位右轴横移，步长统一乘 deltaTime。
     float cameraSpeed = static_cast<float>(2.5 * deltaTime);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
@@ -316,6 +331,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
+    // 首次回调只记录基准，避免默认屏幕中心与首个真实坐标之差造成视角突跳。
     if (firstMouse)
     {
         lastX = xpos;
@@ -323,6 +339,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
         firstMouse = false;
     }
 
+    // GLFW 屏幕 y 向下增长，因此用 lastY-ypos 让鼠标向上对应正 pitch。
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
     lastX = xpos;
@@ -336,11 +353,13 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     pitch += yoffset;
 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
+    // 限制 pitch 可避免 Front 与世界 Up 共线时右轴退化，并防止画面翻转。
     if (pitch > 89.0f)
         pitch = 89.0f;
     if (pitch < -89.0f)
         pitch = -89.0f;
 
+    // 欧拉角转单位方向：yaw 控制水平朝向，pitch 控制仰俯，normalize 消除数值尺度误差。
     glm::vec3 front;
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
@@ -352,6 +371,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+    // 滚轮修改垂直 FOV，并钳制到 [1°,45°]，防止极端投影导致不可用视野。
     fov -= (float)yoffset;
     if (fov < 1.0f)
         fov = 1.0f;
