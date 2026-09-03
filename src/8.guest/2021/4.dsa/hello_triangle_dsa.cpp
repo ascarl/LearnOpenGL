@@ -1,3 +1,9 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 OpenGL 4.5 Direct State Access（DSA）创建和配置缓冲、VAO，而不依赖“先绑定再修改”的全局状态。
+// 核心流程：编译内嵌着色器，直接为 VBO/EBO 分配存储并写数据，再以对象句柄配置 VAO 的属性格式和缓冲绑定后绘制索引四边形。
+// 观察重点：glCreate*、glNamed* 与 glVertexArray* 都显式指定目标对象，可减少传统绑定状态造成的隐式耦合。
+// 平台要求：本示例请求 OpenGL 4.5 DSA；macOS 系统 OpenGL 最高 4.1，无法直接创建所需运行时上下文。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -90,6 +96,8 @@ int main()
     // Here we create the VBO with DSA.
     GLuint vbo = 0;
     // Note how we do not have to call glBindBuffer() after the create call.
+
+    // 关键步骤：对象名称直接传给存储 API，不必先改变 GL_ARRAY_BUFFER 的全局绑定。
     glCreateBuffers(1, &vbo);
     glNamedBufferStorage(vbo, sizeof(vertices), vertices, 0x0);
 
@@ -108,6 +116,8 @@ int main()
     glCreateVertexArrays(1, &vao);
 
     // Specifying our vertex layout with the VAO.
+
+    // 数据流：属性 0 使用 binding 0；随后把 vbo 接到 binding 0，并把 ebo 直接附着到同一个 VAO。
     glEnableVertexArrayAttrib(vao, 0);
     glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
     glVertexArrayAttribBinding(vao, 0, 0);

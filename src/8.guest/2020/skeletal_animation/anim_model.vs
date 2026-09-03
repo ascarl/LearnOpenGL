@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：骨骼蒙皮顶点着色器，每个网格顶点执行一次。
+// 输入输出：读取位置、法线、UV、四个 boneIds/weights 和 CPU 上传的 finalBonesMatrices；输出裁剪空间位置与 UV。
+// 核心算法：在模型局部空间累加最多四个骨骼变换后的加权位置，再应用 model、view、projection。
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 norm;
@@ -21,6 +25,7 @@ out vec2 TexCoords;
 void main()
 {
     vec4 totalPosition = vec4(0.0f);
+    // 每个槽位独立查找对应骨骼矩阵；-1 表示该槽没有骨骼影响，越界则回退到原始位置。
     for(int i = 0 ; i < MAX_BONE_INFLUENCE ; i++)
     {
         if(boneIds[i] == -1) 
@@ -31,6 +36,7 @@ void main()
             break;
         }
         vec4 localPosition = finalBonesMatrices[boneIds[i]] * vec4(pos,1.0f);
+        // 线性混合蒙皮要求有效权重之和接近 1，最终位置才不会被额外缩放。
         totalPosition += localPosition * weights[i];
         vec3 localNormal = mat3(finalBonesMatrices[boneIds[i]]) * norm;
    }

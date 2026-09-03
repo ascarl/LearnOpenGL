@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：HDR 场景光照与亮区提取片段着色器，每个可见场景片元执行一次。
+// 输入输出：读取世界空间位置/法线、漫反射纹理、四个光源和相机位置；MRT 0 写完整 HDR 颜色，MRT 1 写阈值亮区。
+// 核心算法：在线性空间累加平方反比衰减的漫反射光照，并用感知亮度权重判断是否进入 Bloom 输入附件。
+
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
@@ -40,6 +45,8 @@ void main()
     }
     vec3 result = ambient + lighting;
     // check whether result is higher than some threshold, if so, output as bloom threshold color
+
+    // Rec.709 亮度系数把 RGB 化为标量阈值；低亮度片元在 BrightColor 中写黑色但仍保留于 FragColor。
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
         BrightColor = vec4(result, 1.0);

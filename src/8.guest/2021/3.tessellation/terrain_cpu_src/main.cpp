@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在 CPU 端把高度图每个 texel 展开为带高度的网格顶点，并用三角形条带绘制地形。
+// 核心流程：stb_image 读取灰度高度，CPU 生成完整顶点/索引数组并一次上传 VBO/IBO，渲染循环逐条带发出索引绘制。
+// 观察重点：网格密度与高度图分辨率绑定，CPU 内存、上传量和顶点处理量会随像素数量增长。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -109,6 +114,8 @@ int main()
     unsigned bytePerPixel = nrChannels;
     for(int i = 0; i < height; i++)
     {
+
+        // 关键步骤：每个高度图 texel 在 CPU 上直接变成一个世界空间顶点，红色通道映射到 Y 高度。
         for(int j = 0; j < width; j++)
         {
             unsigned char* pixelOffset = data + (j + width * i) * bytePerPixel;
@@ -124,6 +131,8 @@ int main()
     stbi_image_free(data);
 
     std::vector<unsigned> indices;
+
+    // 相邻两行交错写入索引，形成独立三角形条带，避免为规则网格重复存储顶点。
     for(unsigned i = 0; i < height-1; i += rez)
     {
         for(unsigned j = 0; j < width; j += rez)
@@ -195,6 +204,8 @@ int main()
         // render the cube
         glBindVertexArray(terrainVAO);
 //        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+        // 每条带使用不同的 IBO 字节偏移；numTrisPerStrip+2 是该条带实际读取的索引数。
         for(unsigned strip = 0; strip < numStrips; strip++)
         {
             glDrawElements(GL_TRIANGLE_STRIP,   // primitive type

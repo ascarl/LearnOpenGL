@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：多矩形面光源 LTC 片段着色器，每个受光平面片元执行一次并遍历 numAreaLights。
+// 输入输出：读取世界表面属性、材质、最多 32 盏光的四角/颜色/强度，以及共享 LTC1/LTC2；输出所有面积光贡献之和。
+// 核心算法：每盏灯都在同一 LTC 局部空间中做四条球面边解析积分，分别求漫反射和 GGX 近似镜面，再线性累加辐射亮度。
+
 
 out vec4 fragColor;
 
@@ -36,6 +41,8 @@ const float LUT_BIAS  = 0.5/LUT_SIZE;
 // Use for proxy sphere clipping
 vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 {
+
+    // 对单位球面多边形的一条有向边积分，cross 给方向，拟合的 theta/sin(theta) 给边的角权重。
     // Using built-in acos() function will result flaws
     // Using fitting result for calculating acos()
     float x = dot(v1, v2);
@@ -59,6 +66,8 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSid
     T2 = cross(N, T1);
 
     // rotate area light in (T1, T2, N) basis
+
+    // T1/T2/N 把世界坐标旋入着色点局部基，Minv 再把 GGX 波瓣变形成可解析积分的余弦波瓣。
     Minv = Minv * transpose(mat3(T1, T2, N));
 	//Minv = Minv * transpose(mat3(N, T2, T1));
 
@@ -153,6 +162,8 @@ void main()
     );
 
 	// iterate through all area lights
+
+	// LUT 只与当前材质粗糙度和视角有关，循环外查询一次后可复用于所有面光源。
 	for (int i = 0; i < numAreaLights; i++)
 	{
 		// Evaluate LTC shading
@@ -165,6 +176,8 @@ void main()
 		specular *= mSpecular*t2.x + (1.0f - mSpecular) * t2.y;
 
 		// Add contribution
+
+		// 各光源辐射亮度在线性空间相加，循环结束后才统一转回近似 sRGB。
 		result += areaLights[i].color * areaLights[i].intensity * (specular + mDiffuse * diffuse);
 		//result += vec3(0.5, 0.5, 0.5);
 	}

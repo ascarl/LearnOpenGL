@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用父子 Entity 构成场景图，让局部变换沿层级传播为每个节点的世界模型矩阵。
+// 核心流程：创建一条共享 Model 的实体链，updateSelfAndChild 递归组合父子变换，渲染时逐节点提交累计后的 model 矩阵。
+// 观察重点：只旋转根节点即可带动所有后代绕父级坐标系运动，体现局部空间、父空间和世界空间的关系。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -107,6 +112,7 @@ int main()
 	{
 		Entity* lastEntity = &ourEntity;
 
+		// 关键步骤：每个新节点由前一节点持有，形成深度为 11 的父子链并复用同一份模型资源。
 		for (unsigned int i = 0; i < 10; ++i)
 		{
 			lastEntity->addChild(model);
@@ -117,6 +123,7 @@ int main()
 			lastEntity->transform.setLocalScale({ scale, scale, scale });
 		}
 	}
+	// 首次递归更新把每个局部 TRS 与父节点世界矩阵相乘，缓存可直接用于绘制的模型矩阵。
 	ourEntity.updateSelfAndChild();
 
 	// draw in wireframe
@@ -151,6 +158,7 @@ int main()
 		ourShader.setMat4("view", view);
 
 		// draw our scene graph
+		// 数据流：沿场景图读取各节点已经累计的世界矩阵，同一 Model 因不同节点变换被重复实例化绘制。
 		Entity* lastEntity = &ourEntity;
 		while (lastEntity->children.size())
 		{
@@ -160,6 +168,7 @@ int main()
 		}
 
 		ourEntity.transform.setLocalRotation({ 0.f, ourEntity.transform.getLocalRotation().y + 20 * deltaTime, 0.f });
+		// 根节点局部旋转改变后，必须再次向下传播，后代世界变换才会在下一帧反映父级变化。
 		ourEntity.updateSelfAndChild();
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

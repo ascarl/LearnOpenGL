@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：多尺度 Bloom 上采样片段着色器，每个较大目标 mip 的 texel 执行一次。
+// 输入输出：按 filterRadius 在较小 srcTexture 周围采九点，输出到下一较大 mip，再由 CPU 设置的加法混合累积。
+// 核心算法：归一化 3x3 帐篷核使用 1/2/4 对称权重，平滑放大低频辉光并保持核权重和为 1。
+
 
 // This shader performs upsampling on a texture,
 // as taken from Call Of Duty method, presented at ACM Siggraph 2014.

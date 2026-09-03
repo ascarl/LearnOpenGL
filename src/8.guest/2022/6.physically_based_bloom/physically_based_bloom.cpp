@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：比较关闭 Bloom、传统亮区阈值加乒乓高斯模糊，以及多尺度渐进降采样/上采样 Bloom 三条路径。
+// 核心流程：先把 HDR 场景与亮区写入两个颜色附件，再生成多级浮点 mip；由小到大加法重建辉光，最后与场景合成、曝光映射并 Gamma 校正。
+// 观察重点：Karis average 抑制首级降采样的高亮 firefly，帐篷滤波与多尺度累积产生比固定半径高斯模糊更稳定的宽域辉光。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -86,6 +91,7 @@ bool bloomFBO::Init(unsigned int windowWidth, unsigned int windowHeight, unsigne
 	{
 		bloomMip mip;
 
+		// 关键步骤：每一级宽高减半并保留浮点 HDR 能量，mip 链同时编码不同空间尺度的辉光。
 		mipSize *= 0.5f;
 		mipIntSize /= 2;
 		mip.size = mipSize;
@@ -231,6 +237,7 @@ void BloomRenderer::RenderDownsamples(unsigned int srcTexture)
 	glBindTexture(GL_TEXTURE_2D, srcTexture);
 
 	// Progressively downsample through the mip chain
+	// 数据流：首级读取 HDR 亮区，之后每一级读取前一级输出，逐步扩大单个 texel 对应的屏幕区域。
 	for (int i = 0; i < (int)mipChain.size(); i++)
 	{
 		const bloomMip& mip = mipChain[i];
@@ -266,6 +273,8 @@ void BloomRenderer::RenderUpsamples(float filterRadius)
 
 	for (int i = (int)mipChain.size() - 1; i > 0; i--)
 	{
+
+		// 从最小 mip 反向写入更大一级；加法混合把低频宽辉光累积到已有的高频结果中。
 		const bloomMip& mip = mipChain[i];
 		const bloomMip& nextMip = mipChain[i-1];
 
@@ -379,6 +388,8 @@ int main()
     // create 2 floating point color buffers (1 for normal rendering, other for brightness threshold values)
     unsigned int colorBuffers[2];
     glGenTextures(2, colorBuffers);
+
+    // HDR MRT：attachment 0 保存完整场景，attachment 1 保存供两种 Bloom 路径处理的亮区。
     for (unsigned int i = 0; i < 2; i++)
     {
         glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
@@ -476,6 +487,8 @@ int main()
 
         // 1. render scene into floating point framebuffer
         // -----------------------------------------------
+
+        // Pass 1 在浮点 FBO 中保留超过显示范围的亮度，避免进入默认帧缓冲时过早截断。
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -569,6 +582,8 @@ int main()
         // ------------------------------------------------------
         else if (programChoice == 2)
         {
+
+	        // 传统路径在水平/垂直 FBO 间交替十次，以可分离高斯核近似二维模糊。
 	        bool first_iteration = true;
 	        unsigned int amount = 10;
 	        shaderBlur.use();
@@ -589,6 +604,8 @@ int main()
         // -------------------------------------------------------------------
         else if (programChoice == 3)
         {
+
+	        // 多尺度路径先逐级降采样，再以帐篷核和加法混合逐级重建到 mip 0。
 	        bloomRenderer.RenderBloomTexture(colorBuffers[1], bloomFilterRadius);
         }
 
@@ -610,6 +627,8 @@ int main()
         }
         shaderBloomFinal.setInt("programChoice", programChoice);
         shaderBloomFinal.setFloat("exposure", exposure);
+
+        // 最终 Pass 按选择合成场景与辉光，并在写入默认帧缓冲前统一做曝光色调映射和 Gamma 校正。
         renderQuad();
 
         //std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;

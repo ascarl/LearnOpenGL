@@ -1,3 +1,9 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Compute Shader 直接写二维浮点纹理，再把同一纹理作为 sampler 显示到全屏四边形。
+// 核心流程：把 RGBA32F 纹理绑定到 image unit 0，按 100x100 个 work group 调度 10x10 局部调用，屏障后由片段着色器采样结果。
+// 观察重点：全局 invocation ID 与 1000x1000 texel 一一对应；image 写入和后续纹理读取之间必须建立内存可见性。
+// 平台要求：Compute Shader 需要 OpenGL 4.3；macOS 系统 OpenGL 最高 4.1，无法直接创建所需运行时上下文。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -104,6 +110,7 @@ int main(int argc, char* argv[])
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
+	// 关键步骤：binding 0 与 computeShader.cs 的 image2D 声明一致，允许 shader 以 imageStore 直接寻址 texel。
 	glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -127,9 +134,12 @@ int main(int argc, char* argv[])
 
 		computeShader.use();
 		computeShader.setFloat("t", currentFrame);
+
+		// 1000/10 个组乘每组 10 个 invocation，恰好覆盖纹理 X/Y 两个维度且无需边界分支。
 		glDispatchCompute((unsigned int)TEXTURE_WIDTH/10, (unsigned int)TEXTURE_HEIGHT/10, 1);
 
 		// make sure writing to image has finished before read
+		// 本示例在这里发出 image 屏障；若严格保证后续 texture() 取样可见性，还应包含 GL_TEXTURE_FETCH_BARRIER_BIT。
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		// render image to quad

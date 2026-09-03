@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：多尺度 Bloom 降采样片段着色器，每个目标 mip texel 执行一次。
+// 输入输出：读取上一层 srcTexture 与分辨率，13 次采样后输出更低分辨率 HDR 颜色到当前 mip。
+// 核心算法：五组重叠采样以总权重 1 保持能量；首级额外用 Karis average 压低极亮子像素，减少闪烁 firefly。
+
 
 // This shader performs downsampling on a texture,
 // as taken from Call Of Duty method, presented at ACM Siggraph 2014.
@@ -34,6 +39,7 @@ float sRGBToLuma(vec3 col)
 float KarisAverage(vec3 col)
 {
 	// Formula is 1 / (1 + luma)
+	// 颜色越亮权重越低，避免单个异常高亮 texel 在低分辨率 mip 中支配大片区域。
 	float luma = sRGBToLuma(ToSRGB(col)) * 0.25f;
 	return 1.0f / (1.0f + luma);
 }
@@ -84,6 +90,7 @@ void main()
 	// 0.125*5 + 0.03125*4 + 0.0625*4 = 1
 
 	// Check if we need to perform Karis average on each block of 4 samples
+	// 仅从原始亮区写入 mip 0 时启用；后续 mip 已被预过滤，继续应用会反复损失能量。
 	vec3 groups[5];
 	switch (mipLevel)
 	{

@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：传统可分离高斯模糊片段着色器，每个目标 texel 执行一次。
+// 输入输出：采样 image，horizontal 决定沿 X 或 Y 轴取样；输出九个对称样本的加权和。
+// 核心算法：把二维高斯卷积分成水平、垂直两次一维卷积，配合 ping-pong FBO 降低每轮采样成本。
+
 out vec4 FragColor;
 
 in vec2 TexCoords;

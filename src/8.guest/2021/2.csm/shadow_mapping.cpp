@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用级联阴影贴图（CSM）为近处保留更高阴影精度，并覆盖相机完整可见深度范围。
+// 核心流程：把相机视锥切成五段，为每段拟合方向光正交矩阵；一次分层深度 Pass 写纹理数组，再在场景 Pass 按视空间深度选层并执行 PCF。
+// 观察重点：UBO 在 CPU、几何着色器和片段着色器之间共享各级联矩阵；调试模式可显示级联体积或指定深度层。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -47,6 +52,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 std::vector<float> shadowCascadeLevels{ cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f };
+// 四个切分距离把相机深度范围划成五个级联，和几何着色器的 invocations = 5 对应。
 int debugLayer = 0;
 
 // meshes
@@ -153,6 +159,7 @@ int main()
 
     glGenTextures(1, &lightDepthMaps);
     glBindTexture(GL_TEXTURE_2D_ARRAY, lightDepthMaps);
+    // 关键步骤：每个级联占用深度纹理数组的一层，分辨率相同但覆盖的世界空间范围不同。
     glTexImage3D(
         GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32F, depthMapResolution, depthMapResolution, int(shadowCascadeLevels.size()) + 1,
         0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
@@ -182,6 +189,8 @@ int main()
     // configure UBO
     // --------------------
     unsigned int matricesUBO;
+
+    // 数据流：CPU 每帧重算五个光空间矩阵，并通过 binding 0 同时供分层深度 GS 与场景 FS 读取。
     glGenBuffers(1, &matricesUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4x4) * 16, nullptr, GL_STATIC_DRAW);
@@ -238,6 +247,8 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
         glViewport(0, 0, depthMapResolution, depthMapResolution);
         glClear(GL_DEPTH_BUFFER_BIT);
+
+        // 深度 Pass 只提交场景一次；几何着色器把每个三角形复制到五个 gl_Layer。
         glCullFace(GL_FRONT);  // peter panning
         renderScene(simpleDepthShader);
         glCullFace(GL_BACK);
@@ -261,6 +272,8 @@ int main()
         shader.setVec3("lightDir", lightDir);
         shader.setFloat("farPlane", cameraFarPlane);
         shader.setInt("cascadeCount", shadowCascadeLevels.size());
+
+        // 场景片段先用这些切分距离选纹理数组层，再用同层光空间矩阵和深度图判定阴影。
         for (size_t i = 0; i < shadowCascadeLevels.size(); ++i)
         {
             shader.setFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
@@ -644,6 +657,7 @@ std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)
 {
     const auto inv = glm::inverse(projview);
 
+    // 把 NDC 立方体的八个角经逆投影视图矩阵还原到世界空间，得到当前级联切片的几何边界。
     std::vector<glm::vec4> frustumCorners;
     for (unsigned int x = 0; x < 2; ++x)
     {
@@ -668,6 +682,8 @@ std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const 
 
 glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
 {
+
+    // 每个切片都沿用相机 FOV，但使用自己的 near/far；随后在方向光视图中拟合紧致正交投影。
     const auto proj = glm::perspective(
         glm::radians(camera.Zoom), (float)fb_width / (float)fb_height, nearPlane,
         farPlane);
@@ -690,6 +706,8 @@ glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
     float maxZ = std::numeric_limits<float>::lowest();
     for (const auto& v : corners)
     {
+
+        // 在光空间统计包围盒，XY 决定阴影覆盖范围，Z 额外扩展以容纳潜在投影物。
         const auto trf = lightView * v;
         minX = std::min(minX, trf.x);
         maxX = std::max(maxX, trf.x);
@@ -725,6 +743,8 @@ glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane)
 std::vector<glm::mat4> getLightSpaceMatrices()
 {
     std::vector<glm::mat4> ret;
+
+    // 按 [cameraNear, split0]、相邻 split 和 [lastSplit, cameraFar] 依次生成五层矩阵。
     for (size_t i = 0; i < shadowCascadeLevels.size() + 1; ++i)
     {
         if (i == 0)

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在场景图遍历阶段用相机六个视锥平面剔除不可见实体，减少提交给 GPU 的模型数量。
+// 核心流程：CPU 从相机位置、方向、FOV、宽高比和近远面构建 Frustum，再递归测试实体包围体并只绘制相交节点。
+// 观察重点：total 统计 CPU 访问节点数，display 统计通过剔除并提交 GPU 的节点数，可直接比较剔除收益。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -110,6 +115,7 @@ int main()
 	{
 		Entity* lastEntity = &ourEntity;
 
+		// 关键步骤：在 XZ 平面生成 20x20 个实体，提供足够多的视锥内外候选对象用于对比。
 		for (unsigned int x = 0; x < 20; ++x)
 		{
 			for (unsigned int z = 0; z < 20; ++z)
@@ -151,6 +157,7 @@ int main()
 
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		// Frustum 与本帧投影参数保持一致；六个平面都在世界空间，便于和实体世界包围体测试。
 		const Frustum camFrustum = createFrustumFromCamera(camera, (float)SCR_WIDTH / (float)SCR_HEIGHT, glm::radians(camera.Zoom), 0.1f, 100.0f);
 
 		cameraSpy.ProcessMouseMovement(2, 0);
@@ -164,6 +171,7 @@ int main()
 
 		// draw our scene graph
 		unsigned int total = 0, display = 0;
+		// 数据流：递归访问场景图，包围体完全位于任一平面外则跳过 Draw；相交或在内部才提交网格。
 		ourEntity.drawSelfAndChild(camFrustum, ourShader, display, total);
 		std::cout << "Total process in CPU : " << total << " / Total send to GPU : " << display << std::endl;
 

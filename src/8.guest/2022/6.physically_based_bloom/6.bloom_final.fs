@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：Bloom 最终合成、色调映射与 Gamma 校正片段着色器，每个窗口像素执行一次。
+// 输入输出：读取完整 HDR scene、传统或多尺度 bloomBlur、exposure 和模式；输出默认帧缓冲可显示的 LDR RGBA。
+// 核心算法：模式 2 加法叠加旧 Bloom，模式 3 按 bloomStrength 混合新 Bloom，随后应用指数曝光映射和 2.2 Gamma。
+
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -42,6 +47,8 @@ void main()
         result = bloom_none(); break;
     }
     // tone mapping
+
+    // 指数映射把无上限 HDR 压到 [0,1)，再做线性到近似 sRGB 的幂函数转换。
     result = vec3(1.0) - exp(-result * exposure);
     // also gamma correct while we're at it
     const float gamma = 2.2;

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 OpenGL 4.1 细分管线在 GPU 上按相机距离动态细化粗地形 patch，并在细分求值阶段采样高度图位移。
+// 核心流程：CPU 仅生成 20x20 个四控制点 patch；TCS 决定边/内部细分级别，TES 双线性插值位置与 UV、采样高度并输出裁剪坐标。
+// 观察重点：近处细分级别高、远处低，共享边取一致的端点距离以减轻 patch 裂缝；高度图无需展开为完整 CPU 网格。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -123,6 +128,8 @@ int main()
     std::vector<float> vertices;
 
     unsigned rez = 20;
+
+    // 关键步骤：CPU 只提交粗网格每个四边形的四个控制点和 UV，细分后新增顶点完全由 GPU 生成。
     for(unsigned i = 0; i <= rez-1; i++)
     {
         for(unsigned j = 0; j <= rez-1; j++)
@@ -173,6 +180,8 @@ int main()
 
     glPatchParameteri(GL_PATCH_VERTICES, NUM_PATCH_PTS);
 
+    // 后续 GL_PATCHES 每四个顶点组成一个 patch，与 TCS 的 layout(vertices=4) 保持一致。
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -207,6 +216,8 @@ int main()
 
         // render the terrain
         glBindVertexArray(terrainVAO);
+
+        // 数据流：一次 draw 依次触发 VS → TCS → 固定功能细分器 → TES → FS。
         glDrawArrays(GL_PATCHES, 0, NUM_PATCH_PTS*rez*rez);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

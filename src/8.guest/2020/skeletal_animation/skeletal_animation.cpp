@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把 Assimp 骨骼层级、动画关键帧与蒙皮顶点属性串成完整的实时骨骼动画管线。
+// 核心流程：Animation 读取节点通道，Animator 按 deltaTime 采样并递归计算最终骨骼矩阵，CPU 每帧上传后由顶点着色器蒙皮。
+// 观察重点：每个顶点最多受四根骨骼影响；权重混合发生在局部模型空间，之后才应用 model/view/projection。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -88,6 +93,7 @@ int main()
 	// load models
 	// -----------
 	Model ourModel(FileSystem::getPath("resources/objects/vampire/dancing_vampire.dae"));
+	// 关键步骤：动画和网格来自同一 DAE，Animation 以模型的 bone map 对齐通道名称与最终矩阵槽位。
 	Animation danceAnimation(FileSystem::getPath("resources/objects/vampire/dancing_vampire.dae"),&ourModel);
 	Animator animator(&danceAnimation);
 
@@ -108,6 +114,7 @@ int main()
 		// input
 		// -----
 		processInput(window);
+		// 数据流：推进动画时间并沿节点层级组合父子变换，得到本帧所有骨骼的 skinning 矩阵。
 		animator.UpdateAnimation(deltaTime);
 		
 		// render
@@ -125,6 +132,7 @@ int main()
 		ourShader.setMat4("view", view);
 
         auto transforms = animator.GetFinalBoneMatrices();
+		// 上传矩阵数组后，每个顶点可按 boneIds 索引并按 weights 混合最多四个变换结果。
 		for (int i = 0; i < transforms.size(); ++i)
 			ourShader.setMat4("finalBonesMatrices[" + std::to_string(i) + "]", transforms[i]);
 

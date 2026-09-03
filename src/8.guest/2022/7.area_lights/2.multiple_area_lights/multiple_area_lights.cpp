@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把单光源 LTC 扩展到 16 个随机位置、朝向和颜色的矩形面光源，并测量受光平面 Pass 的 GPU 时间。
+// 核心流程：CPU 预计算每盏灯的世界空间四角并上传 uniform 数组；片段着色器复用两张 LTC LUT，逐灯积分漫反射/镜面贡献后累加。
+// 观察重点：LTC 把每盏面积光的多采样问题化为固定四边积分，但片段成本仍随 numAreaLights 线性增长。
+
 //
 // Implementing Areal Lights with Linearly Transformed Cosines.
 //
@@ -110,6 +115,8 @@ GLuint areaLightVBO, areaLightVAO;
 void configureAreaLights()
 {
 	// CONFIGURE AREA LIGHTS
+
+	// 为每盏灯生成平移、绕 Y 旋转和颜色；光源局部四角稍后会被变换到世界空间再上传。
 	std::uniform_real_distribution<GLfloat> random_floats(0.0f, 1.0f);
 	typedef std::chrono::high_resolution_clock myclock;
 	unsigned seed = myclock::now().time_since_epoch().count();
@@ -203,6 +210,8 @@ struct LTC_matrices {
 
 GLuint loadMTexture()
 {
+
+	// LTC1 编码 GGX 到余弦分布的逆线性变换参数，避免运行时逐片元拟合矩阵。
 	GLuint texture = 0;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -221,6 +230,8 @@ GLuint loadMTexture()
 
 GLuint loadLUTTexture()
 {
+
+	// LTC2 编码幅度/Fresnel/地平线裁剪项，与 LTC1 一起按粗糙度和 NdotV 查询。
 	GLuint texture = 0;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -338,6 +349,8 @@ int main()
 
     // SHADER CONFIGURATION
     shaderLTC.use();
+
+    // 关键步骤：CPU 把共享的局部矩形按每盏灯的 model 变换为世界空间四角，供 FS 与世界空间片元直接积分。
     for (int i = 0; i < NUM_AREA_LIGHTS; i++)
 	{
 		glm::mat4 model(1.0f);
@@ -419,6 +432,8 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, concreteTexture);
 
 		// measure time
+
+		// 时间查询只包围受光平面 Draw，可观察片段着色器循环积分 16 盏灯的 GPU 成本。
 		glBeginQuery(GL_TIME_ELAPSED, timeQuery);
 		renderPlane();
 		glEndQuery(GL_TIME_ELAPSED);
@@ -432,6 +447,8 @@ int main()
 		float sinNowTime = glm::sin(currentFrame);
 		for (int i = 0; i < NUM_AREA_LIGHTS; i++)
 		{
+
+			// 该循环只绘制发光矩形的可视化几何；照明贡献已经在前一个平面 Pass 中逐灯累加。
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, areaLights[i].offset);
 			model = glm::rotate(model, areaLights[i].yRotation, glm::vec3(0.0f, 1.0f, 0.0f));

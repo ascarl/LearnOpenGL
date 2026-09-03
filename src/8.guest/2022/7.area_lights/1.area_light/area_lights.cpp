@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Linearly Transformed Cosines（LTC）实时近似矩形面光源对粗糙 GGX 表面的漫反射与镜面反射。
+// 核心流程：CPU 上传 64x64 的 LTC 逆变换/幅度查找表和光源四角；片段着色器按粗糙度与 NdotV 查表，再解析积分整个光源多边形。
+// 观察重点：面光源位置、强度、双面开关和材质粗糙度都会改变高光的面积、形状与能量，而不需要对光源表面随机采样。
+
 //
 // Implementing Areal Lights with Linearly Transformed Cosines.
 //
@@ -169,6 +174,8 @@ struct LTC_matrices {
 
 GLuint loadMTexture()
 {
+
+	// LTC1 保存按粗糙度和视角预拟合的逆变换矩阵参数，用来把 GGX 波瓣映射到标准余弦分布。
 	GLuint texture = 0;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -187,6 +194,8 @@ GLuint loadMTexture()
 
 GLuint loadLUTTexture()
 {
+
+	// LTC2 保存 Fresnel/几何幅度以及地平线裁剪比例，和 LTC1 使用相同的二维查表坐标。
 	GLuint texture = 0;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -300,6 +309,8 @@ int main()
 
     // SHADER CONFIGURATION
     shaderLTC.use();
+
+    // 关键步骤：按一致绕序把矩形四角送入片段着色器，边积分的符号和单/双面判断依赖此顺序。
     shaderLTC.setVec3("areaLight.points[0]", areaLightVertices[0].position);
     shaderLTC.setVec3("areaLight.points[1]", areaLightVertices[1].position);
 	shaderLTC.setVec3("areaLight.points[2]", areaLightVertices[4].position);
@@ -358,6 +369,8 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, mLTC.mat2);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, concreteTexture);
+
+		// 数据流：LTC1/LTC2 与材质纹理在一个片段 Pass 中共同求出整块矩形光源的解析近似贡献。
 		renderPlane();
 		glUseProgram(0);
 

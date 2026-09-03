@@ -1,3 +1,9 @@
+// LearnOpenGL 中文导读
+// 学习目标：用加权混合顺序无关透明（Weighted Blended OIT）近似合成任意绘制顺序的透明表面。
+// 核心流程：先写不透明颜色和共享深度，再把透明片元分别累加到颜色权重与 revealage 附件，随后合成并输出到默认帧缓冲。
+// 观察重点：透明 Pass 关闭深度写入并为两个颜色附件设置独立混合函数，因此无需按深度排序绿色与蓝色平面。
+// 平台要求：本示例请求 OpenGL 4.2；macOS 系统 OpenGL 最高 4.1，无法直接创建所需运行时上下文。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -103,6 +109,7 @@ int main(int argc, char* argv[])
 
 	// set up framebuffers and their texture attachments
 	// ------------------------------------------------------------------
+	// 关键步骤：两个 FBO 共享同一深度纹理，让透明片元仍会被已经写入的不透明几何遮挡。
 	unsigned int opaqueFBO, transparentFBO;
 	glGenFramebuffers(1, &opaqueFBO);
 	glGenFramebuffers(1, &transparentFBO);
@@ -154,6 +161,7 @@ int main(int argc, char* argv[])
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0); // opaque framebuffer's depth texture
 
 	const GLenum transparentDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	// 关键步骤：透明片段着色器的一次执行同时写 accum 与 reveal 两个 MRT 附件。
 	glDrawBuffers(2, transparentDrawBuffers);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -223,6 +231,7 @@ int main(int argc, char* argv[])
 		// configure render states
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
+		// accum 做加法累积，reveal 连乘剩余透射率；二者都与透明几何提交顺序无关。
 		glBlendFunci(0, GL_ONE, GL_ONE);
 		glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 		glBlendEquation(GL_FUNC_ADD);
@@ -262,6 +271,7 @@ int main(int argc, char* argv[])
 		compositeShader.use();
 
 		// draw screen quad
+		// 数据流：读取透明 Pass 的加权颜色和 revealage，恢复平均颜色与合成 alpha，再覆盖到 opaqueTexture。
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, accumTexture);
 		glActiveTexture(GL_TEXTURE1);
@@ -286,6 +296,7 @@ int main(int argc, char* argv[])
 		screenShader.use();
 
 		// draw final screen quad
+		// 最终 Pass 只把已经包含不透明与透明结果的离屏纹理复制到窗口后备缓冲。
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, opaqueTexture);
 		glBindVertexArray(quadVAO);

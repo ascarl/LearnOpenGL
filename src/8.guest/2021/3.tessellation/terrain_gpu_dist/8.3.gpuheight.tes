@@ -1,4 +1,9 @@
 #version 410 core
+// LearnOpenGL 中文导读
+// 着色阶段：四边形细分求值着色器；固定功能细分器生成的每个 (u,v) 域坐标执行一次。
+// 输入输出：读取四个模型空间控制点与 UV、采样 heightMap；输出插值高度和最终裁剪空间 gl_Position。
+// 数据流：先对 UV/位置做双线性插值，再沿 patch 几何法线按高度图位移，最后应用 model/view/projection。
+
 layout(quads, fractional_odd_spacing, ccw) in;
 
 uniform sampler2D heightMap;
@@ -14,6 +19,8 @@ void main()
 {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
+
+    // gl_TessCoord 是当前生成顶点在四边形参数域中的位置，用两次线性插值得到连续 UV。
 
     vec2 t00 = TextureCoord[0];
     vec2 t01 = TextureCoord[1];
@@ -38,6 +45,8 @@ void main()
     vec4 p0 = (p01 - p00) * u + p00;
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0 + normal * Height;
+
+    // 细分只增加采样点密度；真正的地形形状由每个生成顶点在此读取高度图后沿法线位移得到。
 
     gl_Position = projection * view * model * p;
 }

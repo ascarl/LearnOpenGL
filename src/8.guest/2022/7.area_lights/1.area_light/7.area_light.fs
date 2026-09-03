@@ -1,4 +1,9 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：单矩形面光源 LTC 片段着色器，每个受光平面片元执行一次。
+// 输入输出：读取世界位置/法线、材质、相机、光源四角及 LTC1/LTC2；输出线性空间积分后转为近似 sRGB 的颜色。
+// 核心算法：LTC1 把 GGX 波瓣线性映射为余弦波瓣，四条球面边解析积分得到整块光源立体角，LTC2 修正幅度/Fresnel/地平线裁剪。
+
 
 out vec4 fragColor;
 
@@ -36,6 +41,8 @@ const float LUT_BIAS  = 0.5/LUT_SIZE;
 // Use for proxy sphere clipping
 vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 {
+
+    // 归一化球面上相邻顶点的有向边积分；拟合形式避免直接 acos 在端点附近产生明显误差。
     // Using built-in acos() function will result flaws
     // Using fitting result for calculating acos()
     float x = dot(v1, v2);
@@ -64,6 +71,8 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSid
     T2 = cross(N, T1);
 
     // rotate area light in (T1, T2, N) basis
+
+    // 先建立以法线和视线为基的局部坐标，再用 Minv 把光源多边形变换到标准余弦分布空间。
     Minv = Minv * transpose(mat3(T1, T2, N));
 
     // polygon (allocate 4 vertices for clipping)
@@ -141,6 +150,8 @@ void main()
     float dotNV = clamp(dot(N, V), 0.0f, 1.0f);
 
     // use roughness and sqrt(1-cos_theta) to sample M_texture
+
+    // 查表坐标由材质粗糙度与视角共同决定，半 texel bias 避免采到 LUT 边界之外。
     vec2 uv = vec2(material.albedoRoughness.w, sqrt(1.0f - dotNV));
     uv = uv*LUT_SCALE + LUT_BIAS;
 
@@ -164,6 +175,8 @@ void main()
     translatedPoints[3] = areaLight.points[3] + areaLightTranslate;
 
     // Evaluate LTC shading
+
+    // 单位矩阵积分近似漫反射，LTC1 重建的 Minv 积分近似 GGX 镜面波瓣。
     vec3 diffuse = LTC_Evaluate(N, V, P, mat3(1), translatedPoints, areaLight.twoSided);
     vec3 specular = LTC_Evaluate(N, V, P, Minv, translatedPoints, areaLight.twoSided);
 
