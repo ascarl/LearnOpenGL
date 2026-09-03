@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：提供场景层级 Transform、相机视锥平面、包围体测试，以及递归更新/剔除/绘制的教学实现。
+// 所有权：Entity 用 unique_ptr 独占 children 和 AABB；parent、pModel 只是反向/外部借用指针，Model 必须比实体树存活更久。
+// 调用链：调用方先更新根实体矩阵并由 Camera 建立 Frustum，再激活 Shader 后调用 drawSelfAndChild。
+// 包含边界：本头直接使用 Camera、Model、Shader；现有示例会在它之前包含这些类型及 GLM 矩阵变换定义。
 #ifndef ENTITY_H
 #define ENTITY_H
 
@@ -9,6 +14,7 @@
 class Transform
 {
 protected:
+	// m_pos/m_eulerRot/m_scale 位于父节点局部空间；m_modelMatrix 缓存累积后的模型到世界变换。
 	//Local space information
 	glm::vec3 m_pos = { 0.0f, 0.0f, 0.0f };
 	glm::vec3 m_eulerRot = { 0.0f, 0.0f, 0.0f }; //In degrees
@@ -23,6 +29,7 @@ protected:
 protected:
 	glm::mat4 getLocalModelMatrix()
 	{
+		// 欧拉角按 Y * X * Z 组合，再形成 T * R * S；矩阵右侧的缩放最先作用于顶点。
 		const glm::mat4 transformX = glm::rotate(glm::mat4(1.0f), glm::radians(m_eulerRot.x), glm::vec3(1.0f, 0.0f, 0.0f));
 		const glm::mat4 transformY = glm::rotate(glm::mat4(1.0f), glm::radians(m_eulerRot.y), glm::vec3(0.0f, 1.0f, 0.0f));
 		const glm::mat4 transformZ = glm::rotate(glm::mat4(1.0f), glm::radians(m_eulerRot.z), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -43,6 +50,7 @@ public:
 
 	void computeModelMatrix(const glm::mat4& parentGlobalModelMatrix)
 	{
+		// 父世界矩阵左乘本地矩阵，使当前节点及其包围体落到世界空间。
 		m_modelMatrix = parentGlobalModelMatrix * getLocalModelMatrix();
 		m_isDirty = false;
 	}
@@ -67,6 +75,7 @@ public:
 
 	const glm::vec3& getGlobalPosition() const
 	{
+		// 当前签名把 mat4 的 vec4 列转换成 vec3 临时值后以引用返回，返回时引用已悬空，调用者不能安全使用。
 		return m_modelMatrix[3];
 	}
 
@@ -113,6 +122,7 @@ public:
 
 	glm::vec3 getGlobalScale() const
 	{
+		// 模型矩阵前三列的长度给出层级缩放后的各局部轴尺度。
 		return { glm::length(getRight()), glm::length(getUp()), glm::length(getBackward()) };
 	}
 
@@ -124,6 +134,7 @@ public:
 
 struct Plane
 {
+	// 平面采用 dot(normal, point) - distance；视锥各法线朝向可见半空间内部。
 	glm::vec3 normal = { 0.f, 1.f, 0.f }; // unit vector
 	float     distance = 0.f;        // Distance with origin
 
@@ -154,6 +165,7 @@ struct Frustum
 
 struct BoundingVolume
 {
+	// 派生包围体负责先转换到世界空间，再对六个平面执行保守的“在前方或相交”测试。
 	virtual bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const = 0;
 
 	virtual bool isOnOrForwardPlane(const Plane& plane) const = 0;
@@ -185,6 +197,7 @@ struct Sphere : public BoundingVolume
 
 	bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const final
 	{
+		// generateSphereBV 以完整对角线存 radius，故这里乘 0.5 还原半径；再取最大轴尺度处理非均匀缩放。
 		//Get global scale thanks to our transform
 		const glm::vec3 globalScale = transform.getGlobalScale();
 
@@ -225,6 +238,7 @@ struct SquareAABB : public BoundingVolume
 
 	bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const final
 	{
+		// 将旋转/缩放后的三个局部轴投影到世界 XYZ，构造可包住它们的世界轴对齐立方体。
 		//Get global scale thanks to our transform
 		const glm::vec3 globalCenter{ transform.getModelMatrix() * glm::vec4(center, 1.f) };
 
@@ -295,6 +309,7 @@ struct AABB : public BoundingVolume
 
 	bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const final
 	{
+		// 把有向且缩放后的局部 AABB 三轴投影到世界轴，得到保守的世界空间 AABB 半尺寸。
 		//Get global scale thanks to our transform
 		const glm::vec3 globalCenter{ transform.getModelMatrix() * glm::vec4(center, 1.f) };
 
@@ -328,6 +343,7 @@ struct AABB : public BoundingVolume
 
 Frustum createFrustumFromCamera(const Camera& cam, float aspect, float fovY, float zNear, float zFar)
 {
+	// fovY 必须是弧度；六个平面由相机世界空间基向量构造，法线统一朝向视锥内部。
 	Frustum     frustum;
 	const float halfVSide = zFar * tanf(fovY * .5f);
 	const float halfHSide = halfVSide * aspect;
@@ -344,6 +360,8 @@ Frustum createFrustumFromCamera(const Camera& cam, float aspect, float fovY, flo
 
 AABB generateAABB(const Model& model)
 {
+	// 遍历 Model 保留的 CPU 顶点，在模型空间求 min/max；不会读取 GPU 缓冲。
+	// 现有 max 初值使用 numeric_limits<float>::min()，对坐标全为负值的模型存在既有边界问题。
 	glm::vec3 minAABB = glm::vec3(std::numeric_limits<float>::max());
 	glm::vec3 maxAABB = glm::vec3(std::numeric_limits<float>::min());
 	for (auto&& mesh : model.meshes)
@@ -364,6 +382,7 @@ AABB generateAABB(const Model& model)
 
 Sphere generateSphereBV(const Model& model)
 {
+	// 先求模型空间 AABB，再以中心和包围盒对角线长度构造球；Sphere 世界变换处会再乘 0.5。
 	glm::vec3 minAABB = glm::vec3(std::numeric_limits<float>::max());
 	glm::vec3 maxAABB = glm::vec3(std::numeric_limits<float>::min());
 	for (auto&& mesh : model.meshes)
@@ -386,6 +405,7 @@ Sphere generateSphereBV(const Model& model)
 class Entity
 {
 public:
+	// children 拥有子节点；parent 仅指回父节点，不参与释放，因此不会形成所有权环。
 	//Scene graph
 	std::list<std::unique_ptr<Entity>> children;
 	Entity* parent = nullptr;
@@ -393,6 +413,7 @@ public:
 	//Space information
 	Transform transform;
 
+	// 模型由场景外部拥有；boundingVolume 则由当前 Entity 独占。
 	Model* pModel = nullptr;
 	std::unique_ptr<AABB> boundingVolume;
 
@@ -400,6 +421,7 @@ public:
 	// constructor, expects a filepath to a 3D model.
 	Entity(Model& model) : pModel{ &model }
 	{
+		// 默认从 Model 的 CPU 顶点生成局部空间 AABB；不会复制 Model 本身。
 		boundingVolume = std::make_unique<AABB>(generateAABB(model));
 		//boundingVolume = std::make_unique<Sphere>(generateSphereBV(model));
 	}
@@ -433,6 +455,7 @@ public:
 	template<typename... TArgs>
 	void addChild(TArgs&... args)
 	{
+		// unique_ptr 保存新子节点，并设置仅用于变换回溯的非拥有型 parent 指针。
 		children.emplace_back(std::make_unique<Entity>(args...));
 		children.back()->parent = this;
 	}
@@ -440,6 +463,7 @@ public:
 	//Update transform if it was changed
 	void updateSelfAndChild()
 	{
+		// 当前节点变脏时强制重算整棵子树；否则仍递归，让独立变脏的后代自行更新。
 		if (transform.isDirty()) {
 			forceUpdateSelfAndChild();
 			return;
@@ -468,6 +492,7 @@ public:
 
 	void drawSelfAndChild(const Frustum& frustum, Shader& ourShader, unsigned int& display, unsigned int& total)
 	{
+		// Shader 必须已激活；可见节点写入 model uniform 后交给外部 Model 绘制。
 		if (boundingVolume->isOnFrustum(frustum, transform))
 		{
 			ourShader.setMat4("model", transform.getModelMatrix());
@@ -476,6 +501,7 @@ public:
 		}
 		total++;
 
+		// 即使父包围体不可见也继续测试子节点，避免假设父体必然完整包住所有后代。
 		for (auto&& child : children)
 		{
 			child->drawSelfAndChild(frustum, ourShader, display, total);

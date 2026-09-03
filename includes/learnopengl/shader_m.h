@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：创建仅含顶点和片段阶段的 Shader program，并提供 vec/mat 在内的完整 uniform setter 集合。
+// 调用边界：构造前要求 OpenGL 上下文与 GLAD 有效；调用方必须先 use()，set* 不会自动绑定 program。
+// 生命周期：阶段对象链接后删除，program ID 没有析构自动释放；复制对象只会复制同一数值句柄。
+// 变体边界：相较 shader_s 增加 GLM 向量/矩阵 setter；相较 shader.h 不接受几何阶段，use() 可在 const 对象上调用。
 #ifndef SHADER_H
 #define SHADER_H
 
@@ -12,11 +17,13 @@
 class Shader
 {
 public:
+	// 公开 ID 也供 Mesh::Draw 直接查询材质 sampler 的 uniform location。
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(const char* vertexPath, const char* fragmentPath)
     {
+		// 文件读取错误和编译/链接错误只写日志，不通过异常或返回值阻止对象继续构造。
         // 1. retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
         std::string fragmentCode;
@@ -74,8 +81,10 @@ public:
     // ------------------------------------------------------------------------
     void use() const
     { 
+		// glUseProgram 建立后续 glUniform* 的目标 program。
         glUseProgram(ID); 
     }
+	// setter 每次按名称查询 location；调用者负责名称与 Shader 源中的 uniform 完全一致。
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const

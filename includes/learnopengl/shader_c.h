@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：从单个计算 Shader 文件创建 ComputeShader program，并提供与绘制 Shader 相同的 uniform 写入助手。
+// 调用边界：调用方先 use()、设置 uniform，再自行 glDispatchCompute，并根据后续读写类型选择正确的 glMemoryBarrier 位。
+// 生命周期：链接后删除计算阶段对象，但没有析构 glDeleteProgram；ID 只是需由调用方或上下文最终回收的 OpenGL 句柄。
+// 平台边界：Compute Shader 要求 OpenGL 4.3；macOS 系统 OpenGL 最高 4.1，相关示例可编译但不能用系统驱动运行。
 #ifndef COMPUTE_SHADER_H
 #define COMPUTE_SHADER_H
 
@@ -12,11 +17,13 @@
 class ComputeShader
 {
 public:
+	// 与 Shader 变体不同，本类只链接 GL_COMPUTE_SHADER，不参与图形绘制管线。
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     ComputeShader(const char* computePath)
     {
+		// 构造时立即调用 OpenGL，要求上下文当前且 GLAD 已成功加载。
         // 1. retrieve the vertex/fragment source code from filePath
         std::string computeCode;
         std::ifstream cShaderFile;
@@ -48,6 +55,7 @@ public:
         glCompileShader(compute);
         checkCompileErrors(compute, "COMPUTE");
         
+		// 链接完成后阶段对象可删除；program ID 继续供 dispatch 使用。
         // shader Program
         ID = glCreateProgram();
         glAttachShader(ID, compute);
@@ -60,8 +68,10 @@ public:
     // ------------------------------------------------------------------------
     void use() 
     { 
+		// 只绑定 program，不会发起工作组，也不会建立 CPU/GPU 或不同访问类型之间的同步。
         glUseProgram(ID); 
     }
+	// set* 要求本 program 已是当前 program，并在每次调用时通过名称查询 location。
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const

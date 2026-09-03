@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：为入门示例创建顶点+片段 Shader program，并仅提供 bool、int、float 三类基础 uniform setter。
+// 调用边界：构造依赖当前 OpenGL 上下文与 GLAD；use() 之后才能用 set* 修改当前 program 的 uniform。
+// 生命周期：链接后删除两个阶段对象，但类本身不在析构时 glDeleteProgram，ID 由调用方或上下文最终回收。
+// 变体边界：本文件刻意不依赖 GLM；需要 vec/mat setter 时使用 shader_m，几何阶段使用 shader.h。
 #ifndef SHADER_H
 #define SHADER_H
 
@@ -11,11 +16,13 @@
 class Shader
 {
 public:
+	// ID 是共享的 OpenGL program 数值句柄，并非自动管理所有权的 C++ 资源对象。
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(const char* vertexPath, const char* fragmentPath)
     {
+		// 文件或编译错误仅打印日志；构造函数没有返回有效性状态。
         // 1. retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
         std::string fragmentCode;
@@ -72,8 +79,10 @@ public:
     // ------------------------------------------------------------------------
     void use() 
     { 
+		// set* 通过 glUniform 写当前 program，因此调用顺序必须是 use() 在前。
         glUseProgram(ID); 
     }
+	// location 在每次设置时查询，未声明/被优化的 uniform 会以 -1 被 OpenGL 忽略。
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const

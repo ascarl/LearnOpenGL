@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：创建顶点/片段 program，并按路径可选编译几何、细分控制和细分求值阶段，供地形细分等示例使用。
+// 调用边界：构造前需有当前 OpenGL 上下文与 GLAD；使用细分阶段时还需设置 GL_PATCH_VERTICES、以 GL_PATCHES 提交并先 use()。
+// 生命周期：顶点/片段/几何阶段链接后删除；当前实现未删除细分阶段对象，也没有析构 glDeleteProgram，均留给上下文回收。
+// 变体边界：这是 shader.h 的细分扩展版本；可选路径决定实际附加阶段，set* 仍只负责当前 program 的 uniform。
 #ifndef SHADER_H
 #define SHADER_H
 
@@ -12,12 +17,14 @@
 class Shader
 {
 public:
+	// ID 是 OpenGL program 名称；类的默认复制不会克隆底层 program。
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr,
            const char* tessControlPath = nullptr, const char* tessEvalPath = nullptr)
     {
+		// 文件读取失败只记录日志，随后仍尝试编译；调用方需从控制台判断构建的 program 是否有效。
         // 1. retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
         std::string fragmentCode;
@@ -103,6 +110,7 @@ public:
             glCompileShader(geometry);
             checkCompileErrors(geometry, "GEOMETRY");
         }
+		// 可选细分阶段分别编译；Shader 源与 draw call 对 patch 输入输出约定负责。
         // if tessellation shader is given, compile tessellation shader
         unsigned int tessControl;
         if(tessControlPath != nullptr)
@@ -122,6 +130,7 @@ public:
             glCompileShader(tessEval);
             checkCompileErrors(tessEval, "TESS_EVALUATION");
         }
+		// 将实际提供的阶段附加到同一 program；驱动在链接时校验跨阶段接口。
         // shader Program
         ID = glCreateProgram();
         glAttachShader(ID, vertex);
@@ -139,14 +148,17 @@ public:
         glDeleteShader(fragment);
         if(geometryPath != nullptr)
             glDeleteShader(geometry);
+		// 当前代码没有 glDeleteShader(tessControl/tessEval)，所以这两个阶段对象在 program 链接后仍保持分配状态。
 
     }
     // activate the shader
     // ------------------------------------------------------------------------
     void use()
     {
+		// 仅绑定 program；patch primitive、纹理和其他 OpenGL 状态仍由调用方配置。
         glUseProgram(ID);
     }
+	// 各 setter 每次查询 location，且要求 ID 已通过 use() 成为当前 program。
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const

@@ -1,3 +1,7 @@
+// LearnOpenGL 中文导读
+// 职责：从 Assimp 动画文件复制节点层级和各通道关键帧，并与 Model 的骨骼编号、offset 矩阵建立对应关系。
+// 调用链：Model 先导入网格骨骼，Animation 再补齐动画通道，Animator 按时间读取这里保存的 CPU 数据。
+// 生命周期：局部 Assimp::Importer 销毁前数据已复制到 STL/GLM 容器；构造参数 Model* 只在构造期间借用，不被保存。
 #pragma once
 
 #include <vector>
@@ -11,6 +15,7 @@
 
 struct AssimpNodeData
 {
+	// Assimp 节点树的自包含副本；Animator 递归它，而不依赖已释放的 aiScene。
 	glm::mat4 transformation;
 	std::string name;
 	int childrenCount;
@@ -24,6 +29,7 @@ public:
 
 	Animation(const std::string& animationPath, Model* model)
 	{
+		// Importer 拥有 scene；本构造函数返回时 scene 会失效，因此后续只保存复制后的层级与关键帧。
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(animationPath, aiProcess_Triangulate);
 		assert(scene && scene->mRootNode);
@@ -32,6 +38,7 @@ public:
 		m_TicksPerSecond = animation->mTicksPerSecond;
 		aiMatrix4x4 globalTransformation = scene->mRootNode->mTransformation;
 		globalTransformation = globalTransformation.Inverse();
+		// 当前实现没有保存或使用上述逆根变换；最终骨骼矩阵实际由 Animator 的层级全局矩阵乘 offset 得到。
 		ReadHierarchyData(m_RootNode, scene->mRootNode);
 		ReadMissingBones(animation, *model);
 	}
@@ -42,6 +49,7 @@ public:
 
 	Bone* FindBone(const std::string& name)
 	{
+		// 返回 Animation 内部 vector 元素的非拥有型指针；构造完成后该 vector 不再扩容。
 		auto iter = std::find_if(m_Bones.begin(), m_Bones.end(),
 			[&](const Bone& Bone)
 			{
@@ -66,6 +74,7 @@ private:
 	{
 		int size = animation->mNumChannels;
 
+		// 与 Model 共享编号表，保证顶点 bone ID、动画通道和最终矩阵数组使用同一索引。
 		auto& boneInfoMap = model.GetBoneInfoMap();//getting m_BoneInfoMap from Model class
 		int& boneCount = model.GetBoneCount(); //getting the m_BoneCounter from Model class
 
@@ -77,6 +86,7 @@ private:
 
 			if (boneInfoMap.find(boneName) == boneInfoMap.end())
 			{
+				// 此处只补编号，不写 offset；真正参与网格变形的骨骼应已由 Model 导入阶段提供 offset。
 				boneInfoMap[boneName].id = boneCount;
 				boneCount++;
 			}
@@ -91,6 +101,7 @@ private:
 	{
 		assert(src);
 
+		// 递归复制默认局部变换；有动画通道的节点会在 Animator 中被插值结果替换。
 		dest.name = src->mName.data;
 		dest.transformation = AssimpGLMHelpers::ConvertMatrixToGLMFormat(src->mTransformation);
 		dest.childrenCount = src->mNumChildren;

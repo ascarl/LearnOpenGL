@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：从文件编译顶点/片段 Shader，并可选加入几何 Shader，链接为一个可供绘制使用的 program。
+// 调用边界：构造前需有当前 OpenGL 上下文和已加载的 GLAD；先 use()，再调用 set* 写入当前 program 的 uniform。
+// 生命周期：链接后会删除各阶段对象，但没有析构调用 glDeleteProgram；ID 的最终释放仍由调用方或上下文结束负责。
+// 变体边界：这是支持可选几何阶段的通用版本；shader_m/s 只含两阶段，shader_t 另含细分阶段，shader_c 是计算管线。
 #ifndef SHADER_H
 #define SHADER_H
 
@@ -12,11 +17,13 @@
 class Shader
 {
 public:
+	// ID 是 OpenGL program 名称；复制 Shader 只会复制该数值句柄，不代表独立 program。
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr)
     {
+		// 文件读取失败只打印错误，构造流程仍会尝试编译当前字符串并把驱动日志输出到控制台。
         // 1. retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
         std::string fragmentCode;
@@ -81,6 +88,7 @@ public:
             glCompileShader(geometry);
             checkCompileErrors(geometry, "GEOMETRY");
         }
+		// program 链接后已包含阶段可执行代码，临时 shader 对象可以删除而不影响 program。
         // shader Program
         ID = glCreateProgram();
         glAttachShader(ID, vertex);
@@ -100,8 +108,10 @@ public:
     // ------------------------------------------------------------------------
     void use() 
     { 
+		// 后续 glUniform* 修改的是当前绑定 program；set* 自身不会隐式绑定 ID。
         glUseProgram(ID); 
     }
+	// 每次 setter 都即时查询 uniform location；不存在或被优化掉的名称会得到 -1，glUniform 将忽略该写入。
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const
@@ -166,6 +176,7 @@ private:
     // ------------------------------------------------------------------------
     void checkCompileErrors(GLuint shader, std::string type)
     {
+		// type 只用于区分阶段对象与 program，从而选择对应的状态和日志查询 API。
         GLint success;
         GLchar infoLog[1024];
         if(type != "PROGRAM")

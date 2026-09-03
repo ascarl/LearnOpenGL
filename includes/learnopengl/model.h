@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：导入静态模型，递归展平 Assimp 节点中的 Mesh，缓存材质纹理，并把绘制转发给各 Mesh。
+// 数据流：Assimp 数据被复制为 Vertex/Index/Texture，Mesh 构造随即创建 GPU 缓冲；本版本会用 aiProcess_FlipUVs 翻转 UV。
+// 生命周期：Importer 只在 loadModel 内存活；Model/Mesh 不自动删除纹理与 VAO/VBO/EBO，传入的 Shader 由外部管理。
+// 变体边界：本头不导入骨骼权重；model_animation.h 是同名 Model 的动画替代版本，二者使用同一 MODEL_H guard。
 #ifndef MODEL_H
 #define MODEL_H
 
@@ -21,6 +26,7 @@
 #include <vector>
 using namespace std;
 
+// 创建纹理对象并返回数值句柄；调用方负责保证 OpenGL 上下文有效，当前实现不使用 gamma 参数选择 sRGB 内部格式。
 unsigned int TextureFromFile(const char *path, const string &directory, bool gamma = false);
 
 class Model 
@@ -35,12 +41,14 @@ public:
     // constructor, expects a filepath to a 3D model.
     Model(string const &path, bool gamma = false) : gammaCorrection(gamma)
     {
+		// 导入过程中会创建 Mesh 缓冲和纹理，因此不能在 OpenGL 上下文建立前构造。
         loadModel(path);
     }
 
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
+		// Model 不激活 Shader；调用方先 use()，Mesh::Draw 再设置 sampler、绑定 VAO 并绘制。
         for(unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
@@ -49,6 +57,7 @@ private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
     void loadModel(string const &path)
     {
+		// scene 归局部 Importer 所有；processNode 返回前把后续需要的数据全部复制出来。
         // read file via ASSIMP
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
@@ -59,6 +68,7 @@ private:
             return;
         }
         // retrieve the directory path of the filepath
+		// 材质中的相对纹理路径以模型文件所在目录为基准拼接。
         directory = path.substr(0, path.find_last_of('/'));
 
         // process ASSIMP's root node recursively
@@ -68,6 +78,7 @@ private:
     // processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
     void processNode(aiNode *node, const aiScene *scene)
     {
+		// aiNode 只给出 scene Mesh 索引；本实现递归收集 Mesh，但不把节点变换烘焙进顶点。
         // process each mesh located at the current node
         for(unsigned int i = 0; i < node->mNumMeshes; i++)
         {
@@ -86,6 +97,7 @@ private:
 
     Mesh processMesh(aiMesh *mesh, const aiScene *scene)
     {
+		// 将 Assimp 类型逐字段复制到统一 Vertex 布局，随后收集三角化后的索引与材质纹理。
         // data to fill
         vector<Vertex> vertices;
         vector<unsigned int> indices;
@@ -142,6 +154,7 @@ private:
             for(unsigned int j = 0; j < face.mNumIndices; j++)
                 indices.push_back(face.mIndices[j]);        
         }
+		// Mesh 仅保存纹理句柄副本；同一路径的 GPU 纹理由 Model 级 textures_loaded 缓存复用。
         // process materials
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];    
         // we assume a convention for sampler names in the shaders. Each diffuse texture should be named
@@ -172,6 +185,7 @@ private:
     // the required info is returned as a Texture struct.
     vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
     {
+		// 缓存键是 Assimp 返回的材质相对路径，缓存范围仅限当前 Model 实例。
         vector<Texture> textures;
         for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {
@@ -205,6 +219,7 @@ private:
 
 unsigned int TextureFromFile(const char *path, const string &directory, bool gamma)
 {
+	// 先生成 ID 再解码图片；加载失败时仍返回该未填充纹理的句柄，且这里不会删除它。
     string filename = string(path);
     filename = directory + '/' + filename;
 
@@ -223,6 +238,7 @@ unsigned int TextureFromFile(const char *path, const string &directory, bool gam
         else if (nrComponents == 4)
             format = GL_RGBA;
 
+		// 上传完成后生成 mip 链并设置重复寻址、三线性缩小和线性放大过滤。
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);

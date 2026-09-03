@@ -1,3 +1,7 @@
+// LearnOpenGL 中文导读
+// 职责：保存单个 Mesh 的 CPU 顶点/索引/材质句柄，创建 VAO/VBO/EBO，并按约定绑定纹理后执行索引绘制。
+// 调用边界：构造函数要求当前线程已有可用 OpenGL 上下文和 GLAD；Draw 前调用方必须先激活传入的 Shader program。
+// 生命周期：纹理 ID 是 Model 缓存与各 Mesh 共享的数值句柄；本类不删除纹理或 VAO/VBO/EBO，并非完整的 OpenGL RAII 包装。
 #ifndef MESH_H
 #define MESH_H
 
@@ -15,6 +19,7 @@ using namespace std;
 #define MAX_BONE_INFLUENCE 4
 
 struct Vertex {
+	// 属性位置 0--4 保存几何数据，5--6 保存最多四个骨骼索引及对应权重。
     // position
     glm::vec3 Position;
     // normal
@@ -32,6 +37,7 @@ struct Vertex {
 };
 
 struct Texture {
+	// id 由 Model 的加载/缓存流程创建；type 决定 Draw 时拼出的 sampler 名称，path 用于去重。
     unsigned int id;
     string type;
     string path;
@@ -48,6 +54,7 @@ public:
     // constructor
     Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
     {
+		// CPU 数据按值保留，同时立即把同一数据上传到 GPU 缓冲。
         this->vertices = vertices;
         this->indices = indices;
         this->textures = textures;
@@ -59,6 +66,7 @@ public:
     // render the mesh
     void Draw(Shader &shader) 
     {
+		// 依次占用纹理单元，并遵循 texture_diffuseN、texture_specularN 等 Shader 命名契约。
         // bind appropriate textures
         unsigned int diffuseNr  = 1;
         unsigned int specularNr = 1;
@@ -80,17 +88,20 @@ public:
                 number = std::to_string(heightNr++); // transfer unsigned int to string
 
             // now set the sampler to the correct texture unit
+			// 直接调用 glUniform，不会自动 glUseProgram；shader.ID 必须已是当前 program。
             glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
             // and finally bind the texture
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
         
         // draw mesh
+		// EBO 绑定记录在 VAO 中，DrawElements 按 indices 数量提交三角形。
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         // always good practice to set everything back to defaults once configured.
+		// 这里只恢复活动纹理单元；各单元上的纹理绑定仍保留在 OpenGL 状态中。
         glActiveTexture(GL_TEXTURE0);
     }
 
@@ -101,6 +112,7 @@ private:
     // initializes all the buffer objects/arrays
     void setupMesh()
     {
+		// VAO 记录属性格式与 EBO 关联；VBO/EBO 保存构造时 CPU vector 的快照。
         // create buffers/arrays
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
@@ -117,6 +129,7 @@ private:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
+		// 这些固定 location 必须与模型 Shader 的 layout(location = N) 输入保持一致。
         // set the vertex attribute pointers
         // vertex Positions
         glEnableVertexAttribArray(0);	

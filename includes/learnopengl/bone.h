@@ -1,3 +1,7 @@
+// LearnOpenGL 中文导读
+// 职责：拥有单个动画通道的位置、旋转、缩放关键帧，并在给定 tick 上计算该节点的局部 TRS 变换。
+// 插值规则：位置和缩放线性插值，旋转使用四元数 slerp；结果按 translation * rotation * scale 组合。
+// 生命周期：构造时复制 aiNodeAnim 数据，之后不持有 Assimp 指针，也不创建 OpenGL 资源。
 #pragma once
 
 /* Container for bone data */
@@ -12,6 +16,7 @@
 
 struct KeyPosition
 {
+	// timeStamp 与 Animation 当前时间都位于 Assimp 的 tick 时间域。
 	glm::vec3 position;
 	float timeStamp;
 };
@@ -37,6 +42,7 @@ public:
 		m_ID(ID),
 		m_LocalTransform(1.0f)
 	{
+		// 将三类关键帧复制到自有容器，解除对 aiNodeAnim 生命周期的依赖。
 		m_NumPositions = channel->mNumPositionKeys;
 
 		for (int positionIndex = 0; positionIndex < m_NumPositions; ++positionIndex)
@@ -74,6 +80,7 @@ public:
 	
 	void Update(float animationTime)
 	{
+		// 三类轨道分别采样后组成当前节点相对父节点的局部矩阵。
 		glm::mat4 translation = InterpolatePosition(animationTime);
 		glm::mat4 rotation = InterpolateRotation(animationTime);
 		glm::mat4 scale = InterpolateScaling(animationTime);
@@ -87,6 +94,7 @@ public:
 
 	int GetPositionIndex(float animationTime)
 	{
+		// 查找包围当前时间的关键帧区间；找不到时会 assert，因此依赖输入时间落在关键帧覆盖范围内。
 		for (int index = 0; index < m_NumPositions - 1; ++index)
 		{
 			if (animationTime < m_Positions[index + 1].timeStamp)
@@ -120,6 +128,7 @@ private:
 
 	float GetScaleFactor(float lastTimeStamp, float nextTimeStamp, float animationTime)
 	{
+		// 归一化区间进度未在此处 clamp，并假定相邻关键帧时间戳不同。
 		float scaleFactor = 0.0f;
 		float midWayLength = animationTime - lastTimeStamp;
 		float framesDiff = nextTimeStamp - lastTimeStamp;
@@ -129,6 +138,7 @@ private:
 
 	glm::mat4 InterpolatePosition(float animationTime)
 	{
+		// 单关键帧轨道直接使用固定值；多关键帧轨道在相邻位置间线性插值。
 		if (1 == m_NumPositions)
 			return glm::translate(glm::mat4(1.0f), m_Positions[0].position);
 
@@ -143,6 +153,7 @@ private:
 
 	glm::mat4 InterpolateRotation(float animationTime)
 	{
+		// slerp 沿四元数单位球插值，归一化用于抑制数值误差。
 		if (1 == m_NumRotations)
 		{
 			auto rotation = glm::normalize(m_Rotations[0].orientation);
@@ -162,6 +173,7 @@ private:
 
 	glm::mat4 InterpolateScaling(float animationTime)
 	{
+		// 缩放轨道同位置轨道一样在相邻 vec3 之间线性插值。
 		if (1 == m_NumScalings)
 			return glm::scale(glm::mat4(1.0f), m_Scales[0].scale);
 

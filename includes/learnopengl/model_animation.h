@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 职责：作为 model.h 的骨骼动画替代版本，导入 Mesh、材质纹理、每顶点骨骼 ID/权重和骨骼 offset 表。
+// 数据流：Model 建立顶点到骨骼的绑定数据，Animation 复用并补齐编号表，Animator 再生成每帧蒙皮矩阵。
+// 生命周期：Importer 数据会被复制；GPU 纹理与 Mesh 缓冲没有自动释放，Mesh 中的 Texture 仅复制缓存句柄。
+// 变体边界：与 model.h 定义同名 Model 并共享 MODEL_H guard，本版本不请求 aiProcess_FlipUVs，二者不应同时包含。
 #ifndef MODEL_H
 #define MODEL_H
 
@@ -38,16 +43,19 @@ public:
     // constructor, expects a filepath to a 3D model.
     Model(string const &path, bool gamma = false) : gammaCorrection(gamma)
     {
+		// 导入会立即创建 Mesh 缓冲和材质纹理，要求 OpenGL 上下文及 GLAD 已就绪。
         loadModel(path);
     }
 
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
+		// 调用方负责先激活 Shader 并上传 Animator 的骨骼矩阵；这里逐 Mesh 绑定材质并绘制。
         for(unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
     
+	// Animation 通过引用复用同一骨骼编号表；返回对象仍归 Model 所有。
 	auto& GetBoneInfoMap() { return m_BoneInfoMap; }
 	int& GetBoneCount() { return m_BoneCounter; }
 	
@@ -60,6 +68,7 @@ private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
     void loadModel(string const &path)
     {
+		// scene 的所有权属于局部 Importer；递归处理期间复制几何、骨骼和材质数据。
         // read file via ASSIMP
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
@@ -79,6 +88,7 @@ private:
     // processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
     void processNode(aiNode *node, const aiScene *scene)
     {
+		// 节点仅用于找到 Mesh 和子节点；当前实现没有应用 aiNode 的局部变换。
         // process each mesh located at the current node
         for(unsigned int i = 0; i < node->mNumMeshes; i++)
         {
@@ -97,6 +107,7 @@ private:
 
 	void SetVertexBoneDataToDefault(Vertex& vertex)
 	{
+		// -1 让 Shader 识别空槽，0 权重确保未绑定槽不参与蒙皮。
 		for (int i = 0; i < MAX_BONE_INFLUENCE; i++)
 		{
 			vertex.m_BoneIDs[i] = -1;
@@ -107,6 +118,7 @@ private:
 
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene)
 	{
+		// 先复制静态顶点/索引/材质，再把 Assimp 的骨骼权重写入同一 Vertex 数组。
 		vector<Vertex> vertices;
 		vector<unsigned int> indices;
 		vector<Texture> textures;
@@ -154,6 +166,7 @@ private:
 
 	void SetVertexBoneData(Vertex& vertex, int boneID, float weight)
 	{
+		// 只写入前四个空槽；超过 MAX_BONE_INFLUENCE 的影响会被忽略，权重也不会在此重新归一化。
 		for (int i = 0; i < MAX_BONE_INFLUENCE; ++i)
 		{
 			if (vertex.m_BoneIDs[i] < 0)
@@ -168,6 +181,7 @@ private:
 
 	void ExtractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh, const aiScene* scene)
 	{
+		// offset 将模型空间绑定姿势顶点带到骨骼空间；ID 同时写入受该骨骼影响的顶点。
 		auto& boneInfoMap = m_BoneInfoMap;
 		int& boneCount = m_BoneCounter;
 
@@ -205,6 +219,7 @@ private:
 
 	unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = false)
 	{
+		// 当前实现不使用 gamma 参数选择 sRGB 格式；加载失败也会返回已生成但未填充的纹理 ID。
 		string filename = string(path);
 		filename = directory + '/' + filename;
 
@@ -247,6 +262,7 @@ private:
     // the required info is returned as a Texture struct.
     vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
     {
+		// 在单个 Model 内按材质相对路径去重；各 Mesh 保存相同 OpenGL 纹理 ID 的副本。
         vector<Texture> textures;
         for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {

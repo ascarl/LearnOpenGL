@@ -1,3 +1,7 @@
+// LearnOpenGL 中文导读
+// 职责：保存世界空间相机位置与欧拉角，响应键盘/鼠标/滚轮输入，并生成观察矩阵。
+// 调用边界：窗口系统负责提供方向、鼠标偏移和秒级 deltaTime；Camera 不持有 GLFW 窗口或 OpenGL 资源。
+// 坐标约定：Yaw/Pitch 和 Zoom 使用角度，Front/Right/Up 构成世界空间观察基向量，Zoom 表示垂直视场角而非位移。
 #ifndef CAMERA_H
 #define CAMERA_H
 
@@ -61,12 +65,14 @@ public:
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     glm::mat4 GetViewMatrix()
     {
+		// lookAt 以相机位置、前向目标和上方向构造世界空间到观察空间的逆相机变换。
         return glm::lookAt(Position, Position + Front, Up);
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
+		// 速度乘帧间隔，使平移距离尽量不依赖帧率；前后移动包含 Front 的竖直分量。
         float velocity = MovementSpeed * deltaTime;
         if (direction == FORWARD)
             Position += Front * velocity;
@@ -81,12 +87,14 @@ public:
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
     {
+		// 调用方负责把窗口坐标差转换为期望符号；这里仅应用灵敏度并更新欧拉角。
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
         Yaw   += xoffset;
         Pitch += yoffset;
 
+		// 限制在正负 89 度，避免 Front 与 WorldUp 共线导致叉积基向量退化。
         // make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrainPitch)
         {
@@ -103,6 +111,7 @@ public:
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset)
     {
+		// 滚轮改变透视投影使用的垂直 FOV；真正的 projection 矩阵由调用方重建。
         Zoom -= (float)yoffset;
         if (Zoom < 1.0f)
             Zoom = 1.0f;
@@ -114,6 +123,7 @@ private:
     // calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors()
     {
+		// 由球坐标形式的 Yaw/Pitch 重建单位前向量，再用叉积得到正交的右、上方向。
         // calculate the new Front vector
         glm::vec3 front;
         front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
