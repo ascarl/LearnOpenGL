@@ -1,7 +1,7 @@
 // LearnOpenGL 中文导读
 // 学习目标：创建自定义 Framebuffer，把三维场景先渲染到纹理，再通过全屏四边形显示离屏结果。
 // 核心流程：第一 Pass 写颜色纹理及组合 Renderbuffer 的深度部分；第二 Pass 读取颜色纹理并写入默认帧缓冲。
-// 观察重点：附件尺寸和格式必须匹配且 Framebuffer 要完整；屏幕 Pass 不需要场景深度测试。
+// 观察重点：完整性要求各附件尺寸非零、格式适用于对应附件点，多重采样配置一致；颜色与深度格式无需相同。
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

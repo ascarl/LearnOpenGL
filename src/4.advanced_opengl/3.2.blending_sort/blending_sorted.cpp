@@ -226,7 +226,8 @@ int main()
 
         // sort the transparent windows before rendering
         // ---------------------------------------------
-        // 每帧相机都可能移动，因此透明物体距离必须重新计算；map 按距离升序保存。
+        // 每帧重算相机到四边形中心的距离；这只近似适用于简单、互不相交的透明四边形。
+        // std::map 的 key 唯一，两个中心若得到完全相同的 float 距离，后写入项会覆盖先写入项。
         std::map<float, glm::vec3> sorted;
         for (unsigned int i = 0; i < windows.size(); i++)
         {
@@ -267,6 +268,7 @@ int main()
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
         // 逆序遍历得到从远到近的绘制顺序，使近处颜色叠加在已经合成好的远处颜色之上。
+        // 中心距离无法正确处理相交表面、循环遮挡或单个大表面内部次序；一般透明场景需更细排序或 OIT。
         for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
         {
             model = glm::mat4(1.0f);
