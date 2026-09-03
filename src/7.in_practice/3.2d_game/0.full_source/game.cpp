@@ -288,7 +288,7 @@ bool IsOtherPowerUpActive(std::vector<PowerUp> &powerUps, std::string type);
 
 void Game::UpdatePowerUps(float dt)
 {
-    // speed 与 pad-size-increase（Duration 为 0）会在拾取时立即累加并持续到 ResetPlayer；其余四类才递减 Duration，并在没有同类激活效果时撤销。
+    // speed 与 pad-size-increase（Duration 为 0）会在拾取时立即累加并持续到 ResetPlayer；其余四类才依赖 Duration 倒计时控制效果生命周期，并在没有同类激活效果时撤销。
     for (PowerUp &powerUp : this->PowerUps)
     {
         powerUp.Position += powerUp.Velocity * dt;
