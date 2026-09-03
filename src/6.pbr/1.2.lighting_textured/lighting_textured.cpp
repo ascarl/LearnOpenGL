@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：从材质纹理读取 albedo、normal、metallic、roughness 与 AO，并送入 Cook-Torrance BRDF。
+// 核心流程：五张纹理描述每个片元的基础色、微表面法线和物理参数，多点光源在世界空间累加直接辐亮度。
+// 观察重点：albedo 以 sRGB 数据采样后在线性空间计算；法线贴图通过屏幕导数构造局部 TBN。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -82,6 +87,7 @@ int main()
     Shader shader("1.2.pbr.vs", "1.2.pbr.fs");
 
     shader.use();
+    // 五个固定纹理单元组成 metallic/roughness 材质；所有贴图必须用同一 UV 对齐。
     shader.setInt("albedoMap", 0);
     shader.setInt("normalMap", 1);
     shader.setInt("metallicMap", 2);
@@ -141,6 +147,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, albedo);
         glActiveTexture(GL_TEXTURE1);
+        // normal 提供方向，metallic/roughness/AO 是单通道物理参数；它们不应按颜色做 Gamma 编码。
         glBindTexture(GL_TEXTURE_2D, normal);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, metallic);

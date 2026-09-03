@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：Parallax Occlusion Mapping 片段着色器，在分层搜索后插值交点 UV。
+// 输入输出：切线空间 viewDir 驱动高度层遍历，最终 UV 同时采样 diffuse、normal 与 depth 纹理。
+// 核心算法：用越界前后两层的高度差计算权重，在两个 UV 间线性插值，减少离散步进造成的层状跳变。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -20,6 +24,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     // number of depth layers
     const float minLayers = 8;
     const float maxLayers = 32;
+    // 切线空间法线是 +Z；视线越贴近表面，层数越接近 maxLayers。
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
     // calculate the size of each layer
     float layerDepth = 1.0 / numLayers;
@@ -51,6 +56,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     float beforeDepth = texture(depthMap, prevTexCoords).r - currentLayerDepth + layerDepth;
  
     // interpolation of texture coordinates
+    // 两个有符号深度差夹住交点，权重将离散越界位置回插到更接近连续高度表面的 UV。
     float weight = afterDepth / (afterDepth - beforeDepth);
     vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 

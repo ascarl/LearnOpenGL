@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：辨认本目录当前只是深度可视化原型，并未实现级联切分、深度纹理数组或逐级阴影采样。
+// 核心流程：代码仅创建普通纹理立方体和地板，以相机 MVP 绘制；其加载的 shader 文件名也不是本目录的 csm.vs/csm.fs。
+// 阅读提示：完整 CSM 应按相机深度划分级联，为每级生成方向光矩阵与深度层，再按片元所在级联采样。
+
 // Std. Includes
 #include <string>
 
@@ -76,6 +81,7 @@ int main()
     // glDepthFunc(GL_ALWAYS); // Set to always pass the depth test (same effect as glDisable(GL_DEPTH_TEST))
 
     // Setup and compile our shaders
+    // 注意：当前代码引用 depth_testing 文件而不是本目录 csm.vs/csm.fs，说明这里仍是未接线的历史原型。
     Shader shader("depth_testing.vs", "depth_testing.frag");
 
     #pragma region "object_initialization"
@@ -164,6 +170,7 @@ int main()
     GLuint floorTexture = loadTexture(FileSystem::getPath("resources/textures/metal.png").c_str());
     #pragma endregion
 
+    // 这里仅按相机 MVP 正向绘制，没有生成各级光源深度附件，也没有按相机深度选择级联。
     // Game loop
     while(!glfwWindowShouldClose(window))
     {

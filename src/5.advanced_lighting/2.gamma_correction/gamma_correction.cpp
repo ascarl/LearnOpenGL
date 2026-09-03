@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：理解 sRGB 纹理解码、线性空间光照与显示端 Gamma 编码为何必须成对处理。
+// 核心流程：分别创建普通与 GL_SRGB 地板纹理，在片段着色器中比较线性/平方反比衰减并按需编码输出。
+// 观察重点：按空格切换 Gamma；只有在线性空间进行光照累加，亮度与距离的物理关系才保持正确。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -112,6 +117,7 @@ int main()
 
     // load textures
     // -------------
+    // 两个对象引用同一图像；区别仅在内部格式，GL_SRGB 版本在采样时自动解码为线性值。
     unsigned int floorTexture               = loadTexture(FileSystem::getPath("resources/textures/wood.png").c_str(), false);
     unsigned int floorTextureGammaCorrected = loadTexture(FileSystem::getPath("resources/textures/wood.png").c_str(), true);
 
@@ -168,6 +174,7 @@ int main()
         // floor
         glBindVertexArray(planeVAO);
         glActiveTexture(GL_TEXTURE0);
+        // 启用 Gamma 时必须同时选择 sRGB 解码纹理和 Shader 的线性光照/显示编码路径。
         glBindTexture(GL_TEXTURE_2D, gammaEnabled ? floorTextureGammaCorrected : floorTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

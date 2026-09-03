@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：完成方向光 Shadow Mapping 的基本两 Pass 数据流，并观察直接深度比较产生的伪影。
+// 核心流程：先从光源视角写 depthMap，再从相机视角渲染并把当前片元光空间深度与该纹理比较。
+// Pass 依赖：第二 Pass 同时读取漫反射纹理、depthMap 和 lightSpaceMatrix；本阶段尚未加入斜率偏移与 PCF。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -120,6 +125,7 @@ int main()
 
     // configure depth map FBO
     // -----------------------
+    // 深度纹理既是第一 Pass 的写入附件，也是第二 Pass 绑定到纹理单元 1 的只读输入。
     const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
     unsigned int depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
@@ -209,6 +215,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
         glActiveTexture(GL_TEXTURE1);
+        // 第二 Pass 用同一 lightSpaceMatrix 投影片元，并在 shadowMap 中查询光源能看到的最近深度。
         glBindTexture(GL_TEXTURE_2D, depthMap);
         renderScene(shader);
 

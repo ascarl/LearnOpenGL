@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用浮点 HDR 帧缓冲保留大于 1 的场景辐亮度，并在显示前执行曝光映射与 Gamma 编码。
+// 核心流程：照明 Pass 写入 RGBA16F colorBuffer，屏幕 Pass 读取该附件并压缩到显示器可表示的 LDR 范围。
+// Pass 依赖：色调映射必须位于线性 HDR 结果之后；曝光控制映射亮度，Gamma 编码只负责显示传输曲线。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -97,6 +102,7 @@ int main()
     unsigned int colorBuffer;
     glGenTextures(1, &colorBuffer);
     glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    // RGBA16F 不会把大于 1 的线性辐亮度截断，给后续曝光映射保留高光能量。
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -156,6 +162,7 @@ int main()
 
         // 1. render scene into floating point framebuffer
         // -----------------------------------------------
+        // Pass 1 写 colorBuffer 和独立深度 renderbuffer；默认帧缓冲此时不接收场景颜色。
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (GLfloat)SCR_WIDTH / (GLfloat)SCR_HEIGHT, 0.1f, 100.0f);
@@ -186,6 +193,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         hdrShader.use();
         glActiveTexture(GL_TEXTURE0);
+        // Pass 2 只读取浮点颜色附件；色调映射和 Gamma 编码后才写入受显示范围限制的默认帧缓冲。
         glBindTexture(GL_TEXTURE_2D, colorBuffer);
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);

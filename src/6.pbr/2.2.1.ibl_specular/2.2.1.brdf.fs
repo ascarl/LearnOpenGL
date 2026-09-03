@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：Split-Sum 的 BRDF 积分片段着色器，预计算与环境内容无关的二维响应。
+// 输入输出：以 NdotV 和 roughness 为坐标，FragColor.rg 保存 Fresnel 分解系数 A/B。
+// 核心算法：在切线空间令 N=(0,0,1)，用 GGX/Hammersley 积分 G_Vis 与 Schlick Fc；运行期以 F*A+B 重建镜面因子。
 out vec2 FragColor;
 in vec2 TexCoords;
 
@@ -68,6 +72,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 // ----------------------------------------------------------------------------
 vec2 IntegrateBRDF(float NdotV, float roughness)
 {
+    // 在切线空间固定 N=+Z，仅由 N·V 重建观察方向；因此 LUT 不依赖世界朝向或具体环境图。
     vec3 V;
     V.x = sqrt(1.0 - NdotV*NdotV);
     V.y = 0.0;
@@ -94,9 +99,11 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
         if(NdotL > 0.0)
         {
             float G = GeometrySmith(N, V, L, roughness);
+            // G_Vis 合并 Smith 可见性与镜面 BRDF 分母中依赖视角的部分。
             float G_Vis = (G * VdotH) / (NdotH * NdotV);
             float Fc = pow(1.0 - VdotH, 5.0);
 
+            // A/B 分别累计 Schlick Fresnel 中乘 F0 的缩放项和独立偏移项，运行期以 F0*A+B 重组。
             A += (1.0 - Fc) * G_Vis;
             B += Fc * G_Vis;
         }

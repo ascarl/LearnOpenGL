@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用 Split-Sum 近似补全 PBR 镜面 IBL，包括预过滤环境图与二维 BRDF 积分查找表。
+// 核心流程：生成 envCubemap、irradianceMap、按 roughness 分 mip 的 prefilterMap 和以 NdotV/roughness 索引的 brdfLUT。
+// Pass 依赖：运行期漫反射读取 irradianceMap，镜面项同时读取 prefilterMap 与 brdfLUT，再和直接 Cook-Torrance 光照合成。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -92,6 +97,7 @@ int main()
     Shader backgroundShader("2.2.1.background.vs", "2.2.1.background.fs");
 
     pbrShader.use();
+    // Split-Sum 运行期输入：漫反射卷积、按 roughness 预过滤的环境图，以及 NdotV/roughness 二维积分表。
     pbrShader.setInt("irradianceMap", 0);
     pbrShader.setInt("prefilterMap", 1);
     pbrShader.setInt("brdfLUT", 2);
@@ -262,6 +268,7 @@ int main()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // be sure to set minification filter to mip_linear 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // generate mipmaps for the cubemap so OpenGL automatically allocates the required memory.
+    // 每个 mip 不由普通下采样产生，而会在下方按对应 roughness 独立积分环境 radiance。
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     // pbr: run a quasi monte-carlo simulation on the environment lighting to create a prefilter (cube)map.
@@ -283,6 +290,7 @@ int main()
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
         glViewport(0, 0, mipWidth, mipHeight);
 
+        // mip 0 表示近镜面反射，最高 mip 表示最粗糙表面；纹理 LOD 因而成为 roughness 维度。
         float roughness = (float)mip / (float)(maxMipLevels - 1);
         prefilterShader.setFloat("roughness", roughness);
         for (unsigned int i = 0; i < 6; ++i)
@@ -298,6 +306,7 @@ int main()
 
     // pbr: generate a 2D LUT from the BRDF equations used.
     // ----------------------------------------------------
+    // RG 两通道保存 Fresnel 分解系数 A/B；环境内容已被剥离，所以整场景可共享一张 LUT。
     unsigned int brdfLUTTexture;
     glGenTextures(1, &brdfLUTTexture);
 
@@ -369,6 +378,7 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
         glActiveTexture(GL_TEXTURE2);
+        // 最终镜面 IBL 同时依赖反射方向/roughness 选出的环境值，以及 NdotV/roughness 查询出的 BRDF 系数。
         glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
         // render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively

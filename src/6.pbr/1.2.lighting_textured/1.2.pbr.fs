@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：PBR 片段着色器，在世界空间计算 metallic/roughness 工作流的直接光与当前阶段的环境项。
+// 输入输出：albedo/normal/metallic/roughness/AO 均由纹理逐片元提供；albedo 从 sRGB 数值解码到线性空间，法线经导数 TBN 转到世界空间。
+// 核心算法：Cook-Torrance 镜面项由 GGX 法线分布 D、Smith 遮蔽 G、Schlick Fresnel F 构成，Lambert 漫反射用 albedo/π 并遵守能量守恒。
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
@@ -42,6 +46,7 @@ vec3 getNormalFromMap()
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
+    // D_GGX：给定世界空间宏观法线 N，估计微表面法线与半程向量 H 对齐的统计密度。
     float a = roughness*roughness;
     float a2 = a*a;
     float NdotH = max(dot(N, H), 0.0);
@@ -67,6 +72,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 // ----------------------------------------------------------------------------
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
+    // G_Smith：估计世界空间观察与入射方向同时未被微表面自遮蔽的比例。
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
     float ggx2 = GeometrySchlickGGX(NdotV, roughness);
@@ -77,14 +83,17 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 // ----------------------------------------------------------------------------
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
+    // F_Schlick：由夹角和法向入射反射率 F0 近似界面反射能量，掠射角趋近全反射。
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 // ----------------------------------------------------------------------------
 void main()
 {		
+    // albedo 是颜色数据，2.2 次幂近似从 sRGB 解码到线性；其余标量贴图保持线性原值。
     vec3 albedo     = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
     float metallic  = texture(metallicMap, TexCoords).r;
     float roughness = texture(roughnessMap, TexCoords).r;
+    // AO 表示间接环境光的局部可见度，本直接光示例只用它缩放经验环境项。
     float ao        = texture(aoMap, TexCoords).r;
 
     vec3 N = getNormalFromMap();
@@ -93,6 +102,7 @@ void main()
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
     vec3 F0 = vec3(0.04); 
+    // 介电材质保留约 4% 无色法向反射；金属则以 albedo 作为有色 F0，metallic 在两者间插值。
     F0 = mix(F0, albedo, metallic);
 
     // reflectance equation
@@ -112,6 +122,7 @@ void main()
         vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
            
         vec3 numerator    = NDF * G * F; 
+        // 分母 4(N·V)(N·L) 把微表面统计量转换为 BRDF；微小常数仅防止掠射角除零。
         float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
         vec3 specular = numerator / denominator;
         
@@ -125,6 +136,7 @@ void main()
         // have diffuse lighting, or a linear blend if partly metal (pure metals
         // have no diffuse light).
         kD *= 1.0 - metallic;	  
+        // 纯金属没有本模型中的漫反射；剩余能量 kD 与 Lambert albedo/PI 共同形成漫反射 BRDF。
 
         // scale light by NdotL
         float NdotL = max(dot(N, L), 0.0);        

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在全向点光源阴影上加入多方向 PCF 采样，降低深度立方体贴图的硬边与锯齿。
+// 核心流程：第一 Pass 生成六面径向深度，第二 Pass 围绕查询方向采样多个偏移并平均遮挡结果。
+// 观察重点：采样盘半径随观察距离增长，在软化远处阴影的同时控制近处细节与采样成本。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -107,6 +112,7 @@ int main()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     // attach depth texture as FBO's depth buffer
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    // 绑定整个 layered Cubemap；深度几何着色器一次绘制即可把场景复制到六个面。
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
@@ -150,6 +156,7 @@ int main()
         float near_plane = 1.0f;
         float far_plane = 25.0f;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+        // 六个 90° 光源视图无缝覆盖球面方向，结果仍以世界空间径向距离编码。
         std::vector<glm::mat4> shadowTransforms;
         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
@@ -188,6 +195,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
         glActiveTexture(GL_TEXTURE1);
+        // 软阴影版本在此 Cubemap 周围取多方向样本；无需额外深度 Pass，只增加相机 Pass 的采样成本。
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
         renderScene(shader);
 

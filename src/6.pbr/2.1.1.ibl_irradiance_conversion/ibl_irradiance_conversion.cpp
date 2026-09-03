@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把等距柱状 HDR 环境图转换为线性浮点 Cubemap，建立后续 IBL 预计算的统一方向采样源。
+// 核心流程：captureFBO 逐面附加 envCubemap 的六个面并渲染立方体；运行期 PBR 此阶段仍直接使用常量环境项。
+// Pass 依赖：转换 Pass 读取 equirectangularMap、写 envCubemap；背景 Pass 读取该 Cubemap 验证方向和色彩范围。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -113,6 +118,7 @@ int main()
 
     // pbr: setup framebuffer
     // ----------------------
+    // captureFBO 在六次绘制中重复使用；每次只替换颜色附件为 envCubemap 的一个面。
     unsigned int captureFBO;
     unsigned int captureRBO;
     glGenFramebuffers(1, &captureFBO);
@@ -149,6 +155,7 @@ int main()
 
     // pbr: setup cubemap to render to and attach to framebuffer
     // ---------------------------------------------------------
+    // RGB16F 保留 HDR radiance；立方体六面纹理是后续卷积/预过滤都能按方向查询的中间表示。
     unsigned int envCubemap;
     glGenTextures(1, &envCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
@@ -185,6 +192,7 @@ int main()
 
     glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    // captureViews 与 Cubemap 面顺序严格对应；把当前面附加后绘制立方体即可完成一次方向重采样。
     for (unsigned int i = 0; i < 6; ++i)
     {
         equirectangularToCubemapShader.setMat4("view", captureViews[i]);
@@ -227,6 +235,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // 当前阶段尚未生成 irradianceMap；PBR 仍使用常量环境项，envCubemap 只供背景显示验证。
         // render scene, supplying the convoluted irradiance map to the final shader.
         // ------------------------------------------------------------------------------------------
         pbrShader.use();

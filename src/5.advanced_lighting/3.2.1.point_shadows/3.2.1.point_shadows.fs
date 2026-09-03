@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：点光源相机 Pass 片段着色器，将世界空间光照与深度 Cubemap 可见度组合。
+// 输入输出：depthMap 以 light-to-fragment 方向查询最近径向距离，far_plane 还原世界空间尺度。
+// 核心算法：当前世界空间距离减 bias 后与 Cubemap 最近距离比较，得到单次硬阴影可见度。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -19,6 +23,7 @@ uniform bool shadows;
 float ShadowCalculation(vec3 fragPos)
 {
     // get vector between fragment position and light position
+    // 未归一化向量既给出 Cubemap 查询方向，其长度又给出当前片元的世界空间径向深度。
     vec3 fragToLight = fragPos - lightPos;
     // ise the fragment to light vector to sample from the depth map    
     float closestDepth = texture(depthMap, fragToLight).r;
@@ -28,6 +33,7 @@ float ShadowCalculation(vec3 fragPos)
     float currentDepth = length(fragToLight);
     // test for shadows
     float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range
+    // 1 表示被遮挡；环境项在 main 中保留，只有直接漫反射和镜面项乘以可见度。
     float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;        
     // display closestDepth as debug (to visualize depth cubemap)
     // FragColor = vec4(vec3(closestDepth / far_plane), 1.0);    

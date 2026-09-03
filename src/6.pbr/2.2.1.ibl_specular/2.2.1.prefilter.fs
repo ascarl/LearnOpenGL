@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：镜面 IBL 预过滤片段着色器，按 roughness 对环境 radiance 做 GGX 重要性采样。
+// 输入输出：WorldPos 定义世界空间 N/R，environmentMap 是原始 HDR Cubemap，输出写 prefilterMap 对应 roughness mip。
+// 核心算法：Hammersley 样本偏向 GGX 高概率半程向量；PDF 与样本立体角决定源纹理 LOD，物理上近似第一项 Split-Sum。
 out vec4 FragColor;
 in vec3 WorldPos;
 
@@ -77,6 +81,7 @@ void main()
     {
         // generates a sample vector that's biased towards the preferred alignment direction (importance sampling).
         vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+        // 在以世界空间 N 为轴的局部基中按 GGX 分布抽取半程向量 H，再反射 V 得到环境入射方向 L。
         vec3 H = ImportanceSampleGGX(Xi, N, roughness);
         vec3 L  = normalize(2.0 * dot(V, H) * H - V);
 
@@ -87,12 +92,14 @@ void main()
             float D   = DistributionGGX(N, H, roughness);
             float NdotH = max(dot(N, H), 0.0);
             float HdotV = max(dot(H, V), 0.0);
+            // PDF 将 GGX 半程向量概率换算到入射方向域，用于估计单个蒙特卡洛样本覆盖的立体角。
             float pdf = D * NdotH / (4.0 * HdotV) + 0.0001; 
 
             float resolution = 512.0; // resolution of source cubemap (per face)
             float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
             float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
+            // 样本立体角越大，就从更粗 mip 取平均 radiance，降低稀疏采样 HDR 环境造成的亮点噪声。
             float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
             
             prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;

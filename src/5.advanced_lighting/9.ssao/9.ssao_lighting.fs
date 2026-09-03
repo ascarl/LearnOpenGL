@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：SSAO 最终光照片段着色器，从视空间 G-buffer 重建表面并组合环境遮蔽。
+// 输入输出：gPosition/gNormal/gAlbedo 与 light.Position 都在视空间，ssao 提供 [0,1] 环境可见度。
+// 核心算法：AO 只乘环境项；直接漫反射、高光和距离衰减仍按可见点光源计算，避免错误压暗直接光。
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -26,6 +30,7 @@ void main()
     float AmbientOcclusion = texture(ssao, TexCoords).r;
     
     // then calculate lighting as usual
+    // SSAO 近似环境方向的可见度，故只缩放环境项；它不表示点光源到片元之间的阴影。
     vec3 ambient = vec3(0.3 * Diffuse * AmbientOcclusion);
     vec3 lighting  = ambient; 
     vec3 viewDir  = normalize(-FragPos); // viewpos is (0.0.0)

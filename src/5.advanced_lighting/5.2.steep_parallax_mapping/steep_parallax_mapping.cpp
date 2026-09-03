@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：通过分层步进寻找视线与高度场的首次交点，改善基本视差贴图在斜视角下的误差。
+// 核心流程：顶点阶段提供切线空间方向，片段阶段沿视线逐层移动 UV，直到采样高度越过当前层深度。
+// 观察重点：层数随视角变化；层数越多轮廓越稳定但纹理采样成本也越高。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -83,6 +88,7 @@ int main()
 
     // load textures
     // -------------
+    // diffuse、normal、height 必须在同一参数化上对齐，步进得到的 UV 才能驱动完整材质采样。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/bricks2.jpg").c_str());
     unsigned int normalMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_normal.jpg").c_str());
     unsigned int heightMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_disp.jpg").c_str());
@@ -132,6 +138,7 @@ int main()
         shader.setMat4("model", model);
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
+        // Shader 会把该总高度范围均分为视角相关层数，再沿切线空间视线逐层前进。
         shader.setFloat("heightScale", heightScale); // adjust with Q and E keys
         std::cout << heightScale << std::endl;
         glActiveTexture(GL_TEXTURE0);

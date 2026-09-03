@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在陡峭视差步进后对最后两层交点做线性插值，获得更平滑的 Parallax Occlusion Mapping。
+// 核心流程：三纹理材质沿切线空间视线搜索高度层，再以层前/层后的深度差加权最终 UV。
+// 观察重点：该方法只改变纹理查询，不改变真实轮廓或投影；过大的 heightScale 会暴露 UV 拉伸与丢弃边界。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -83,6 +88,7 @@ int main()
 
     // load textures
     // -------------
+    // 最终插值 UV 会同时查询三张对齐纹理，避免高度交点和表面光照来自不同位置。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/bricks2.jpg").c_str());
     unsigned int normalMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_normal.jpg").c_str());
     unsigned int heightMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_disp.jpg").c_str());
@@ -132,6 +138,7 @@ int main()
         shader.setMat4("model", model);
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
+        // POM 在越过高度表面后回看前一层并插值，因此同层数下比陡峭视差更平滑。
         shader.setFloat("heightScale", heightScale); // adjust with Q and E keys
         std::cout << heightScale << std::endl;
         glActiveTexture(GL_TEXTURE0);

@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：延迟光照片段着色器，从 G-buffer 重建表面数据并累加 32 个世界空间点光源。
+// 输入输出：gPosition/gNormal/gAlbedoSpec 分别提供位置、法线、基础色与镜面强度；viewPos 也在世界空间。
+// 核心算法：先用 distance < Radius 剔除有效光照体积外的灯，再按衰减、N·L 与 Blinn-Phong 高光累加。
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -34,6 +38,7 @@ void main()
     {
         // calculate distance between light source and current fragment
         float distance = length(lights[i].Position - FragPos);
+        // Radius 是 CPU 解衰减阈值得到的世界空间界限；外部片元跳过该灯的光照近似计算。
         if(distance < lights[i].Radius)
         {
             // diffuse

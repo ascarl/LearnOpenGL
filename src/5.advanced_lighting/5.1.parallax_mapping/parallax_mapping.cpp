@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用高度图和切线空间观察方向对 UV 做一次偏移，模拟表面视差而不增加几何体。
+// 核心流程：CPU 上传 diffuse/normal/depth 三张纹理与 heightScale，Shader 在采样材质前计算偏移纹理坐标。
+// 观察重点：Q/E 调整高度尺度；单步近似成本低，但斜视角下无法正确追踪高度层交点。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -83,6 +88,7 @@ int main()
 
     // load textures
     // -------------
+    // 三张纹理必须共用 UV：高度先决定偏移，颜色与法线再在偏移后的坐标处采样。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/bricks2.jpg").c_str());
     unsigned int normalMap  = loadTexture(FileSystem::getPath("resources/textures/bricks2_normal.jpg").c_str());
     unsigned int heightMap  = loadTexture(FileSystem::getPath("resources/textures/bricks2_disp.jpg").c_str());
@@ -132,6 +138,7 @@ int main()
         shader.setMat4("model", model);
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
+        // heightScale 只缩放虚拟高度导致的 UV 位移，不会改变顶点位置、深度缓冲或真实轮廓。
         shader.setFloat("heightScale", heightScale); // adjust with Q and E keys
         std::cout << heightScale << std::endl;
         glActiveTexture(GL_TEXTURE0);

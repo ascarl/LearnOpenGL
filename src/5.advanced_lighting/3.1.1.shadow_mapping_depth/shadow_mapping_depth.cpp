@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：建立方向光阴影贴图的第一阶段，只从光源视角记录最近表面深度。
+// 核心流程：深度专用 FBO 将场景写入 depthMap，随后全屏四边形读取该附件以便观察光空间深度。
+// Pass 依赖：光源正交投影与视图矩阵生成 lightSpaceMatrix；调试 Pass 只依赖第一 Pass 的深度纹理。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -119,6 +124,7 @@ int main()
 
     // configure depth map FBO
     // -----------------------
+    // 该 FBO 没有颜色附件，只保存光源视角的最近深度；GL_NONE 明确关闭颜色读写。
     const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
     unsigned int depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
@@ -174,6 +180,7 @@ int main()
         float near_plane = 1.0f, far_plane = 7.5f;
         lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
         lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        // lightSpaceMatrix 把世界坐标依次送入光源视图和正交投影，是深度写入与后续查询的共同坐标约定。
         lightSpaceMatrix = lightProjection * lightView;
         // render scene from light's point of view
         simpleDepthShader.use();
@@ -198,6 +205,7 @@ int main()
         debugDepthQuad.setFloat("far_plane", far_plane);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, depthMap);
+        // 调试四边形消费第一 Pass 的 depthMap；它不重新渲染场景，只把附件内容映射到屏幕。
         renderQuad();
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)

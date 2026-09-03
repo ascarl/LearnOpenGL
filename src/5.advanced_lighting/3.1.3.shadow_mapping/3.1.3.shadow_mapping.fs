@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：方向光相机 Pass 的片段着色器，组合 Blinn-Phong 光照与阴影可见度。
+// 输入输出：diffuseTexture 提供表面颜色，shadowMap 提供光源最近深度；位置、法线、光源和相机均按世界空间解释。
+// 核心算法：光空间透视除法后映射到 [0,1]，用斜率 bias 避免自遮挡，并以 3x3 PCF 平均九次深度比较软化边缘。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -27,11 +31,13 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // calculate bias (based on depth map resolution and slope)
     vec3 normal = normalize(fs_in.Normal);
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+    // N·L 越小代表表面越倾斜，有限深度精度造成的自遮挡误差越大，因此需要更高 bias。
     float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     // check whether current frag pos is in shadow
     // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
     // PCF
     float shadow = 0.0;
+    // texelSize 把整数邻域偏移换成纹理坐标；九次二值比较的均值近似面积光可见比例。
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     for(int x = -1; x <= 1; ++x)
     {

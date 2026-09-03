@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：把纹理化 metallic/roughness 工作流与完整 Split-Sum IBL 组合成可复用的 PBR 材质路径。
+// 核心流程：离线式启动阶段预计算三种环境资源，运行期绑定五张材质图和 irradiance/prefilter/BRDF LUT 后绘制模型球。
+// Pass 依赖：世界空间 N、V、R 驱动环境查询；材质 roughness 选择预过滤 mip，NdotV 与 roughness 查询 BRDF LUT。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -93,6 +98,7 @@ int main()
     Shader backgroundShader("2.2.2.background.vs", "2.2.2.background.fs");
 
     pbrShader.use();
+    // 0..2 是场景共享 IBL，3..7 是每种材质的五张纹理；固定单元让切换材质只需重绑纹理对象。
     pbrShader.setInt("irradianceMap", 0);
     pbrShader.setInt("prefilterMap", 1);
     pbrShader.setInt("brdfLUT", 2);
@@ -299,6 +305,7 @@ int main()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // be sure to set minification filter to mip_linear 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // generate mipmaps for the cubemap so OpenGL automatically allocates the required memory.
+    // 这里只分配完整 mip 链；每一级随后都会以对应 roughness 重新渲染，而不是保留普通盒式下采样。
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     // pbr: run a quasi monte-carlo simulation on the environment lighting to create a prefilter (cube)map.
@@ -320,6 +327,7 @@ int main()
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
         glViewport(0, 0, mipWidth, mipHeight);
 
+        // 用 mip 轴离散表示 roughness，运行期 textureLod 可在相邻粗糙度积分结果间过滤。
         float roughness = (float)mip / (float)(maxMipLevels - 1);
         prefilterShader.setFloat("roughness", roughness);
         for (unsigned int i = 0; i < 6; ++i)
@@ -335,6 +343,7 @@ int main()
 
     // pbr: generate a 2D LUT from the BRDF equations used.
     // ----------------------------------------------------
+    // LUT 的横轴是 NdotV、纵轴是 roughness，RG 存积分后的缩放与偏移系数。
     unsigned int brdfLUTTexture;
     glGenTextures(1, &brdfLUTTexture);
 
@@ -407,6 +416,7 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
         glActiveTexture(GL_TEXTURE2);
+        // 共享环境资源先绑定，随后每种材质再将 albedo/normal/metallic/roughness/AO 绑定到 3..7。
         glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
         // rusted iron

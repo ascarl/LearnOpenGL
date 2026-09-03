@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：使用深度立方体贴图为点光源建立覆盖六个方向的全向硬阴影。
+// 核心流程：几何着色器把每个三角形复制到六个立方体面并写径向深度，再由相机 Pass 比较片元到光源的距离。
+// Pass 依赖：depthCubemap 保存归一化的世界空间径向距离；采样时必须使用相同 far_plane 还原尺度。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -107,6 +112,7 @@ int main()
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     // attach depth texture as FBO's depth buffer
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    // 绑定整个 layered Cubemap；几何着色器通过 gl_Layer 决定每个复制三角形写入哪一面。
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
@@ -150,6 +156,7 @@ int main()
         float near_plane = 1.0f;
         float far_plane  = 25.0f;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+        // 六个 lookAt 覆盖 ±X/±Y/±Z，并为每一面选取不退化的上方向。
         std::vector<glm::mat4> shadowTransforms;
         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
@@ -188,6 +195,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
         glActiveTexture(GL_TEXTURE1);
+        // 相机 Pass 以 light-to-fragment 世界方向采样 Cubemap，并把归一化深度乘回 far_plane 比较。
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
         renderScene(shader);
 

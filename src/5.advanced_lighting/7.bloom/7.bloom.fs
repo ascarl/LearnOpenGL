@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：Bloom 场景 Pass 片段着色器，同时输出完整 HDR 场景和高亮掩码。
+// 输入输出：location 0 写 FragColor，location 1 写 BrightColor；两者对应 colorBuffers[0/1]。
+// 核心算法：在线性空间以 Rec.709 亮度权重求 brightness，超过 1 的能量进入后续模糊 Pass。
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
@@ -40,6 +44,7 @@ void main()
     }
     vec3 result = ambient + lighting;
     // check whether result is higher than some threshold, if so, output as bloom threshold color
+    // 该点积是线性 RGB 的感知亮度近似；阈值 1 保留超出普通显示白点的 HDR 能量。
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
         BrightColor = vec4(result, 1.0);

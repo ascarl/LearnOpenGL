@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在延迟着色中根据衰减方程求点光源有效半径，跳过光照体积外的无贡献计算。
+// 核心流程：几何 Pass 生成世界空间 G-buffer，光照 Pass 读取附件并仅在 distance < Radius 时累加该灯贡献。
+// Pass 依赖：CPU 由常数/线性/二次衰减和亮度阈值解半径；后续深度复制与灯箱 Pass 仍依赖几何深度。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -105,6 +110,7 @@ int main()
     unsigned int gBuffer;
     glGenFramebuffers(1, &gBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+    // G-buffer 通道约定与基础延迟示例一致，仍保存世界空间位置/法线和材质参数。
     unsigned int gPosition, gNormal, gAlbedoSpec;
     // position color buffer
     glGenTextures(1, &gPosition);
@@ -230,6 +236,7 @@ int main()
             shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
             // then calculate radius of light volume/sphere
             const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
+            // 解二次衰减方程在亮度降到 5/256 时的正根，得到可忽略贡献之外的世界空间半径。
             float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
             shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
         }
@@ -241,6 +248,7 @@ int main()
         // ----------------------------------------------------------------------------------
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+        // 将几何深度传给默认帧缓冲，保证后绘制的光源标记仍被背包模型遮挡。
         // blit to default framebuffer. Note that this may or may not work as the internal formats of both the FBO and default framebuffer have to match.
         // the internal formats are implementation defined. This works on all of my systems, but if it doesn't on yours you'll likely have to write to the 		
         // depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).

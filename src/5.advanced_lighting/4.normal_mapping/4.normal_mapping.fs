@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：法线贴图片段着色器，在切线空间执行 Blinn-Phong 光照。
+// 输入输出：normalMap 的 [0,1] RGB 重映射到 [-1,1]，diffuseMap 提供表面颜色。
+// 核心算法：采样法线与 TangentLight/View/FragPos 位于同一切线空间，N·L 和 N·H 才具有正确几何意义。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -20,6 +24,7 @@ void main()
      // obtain normal from normal map in range [0,1]
     vec3 normal = texture(normalMap, fs_in.TexCoords).rgb;
     // transform normal vector to range [-1,1]
+    // RGB 中性法线 (0.5,0.5,1) 会还原为切线空间 +Z，即未扰动的宏观表面法线。
     normal = normalize(normal * 2.0 - 1.0);  // this normal is in tangent space
    
     // get diffuse color

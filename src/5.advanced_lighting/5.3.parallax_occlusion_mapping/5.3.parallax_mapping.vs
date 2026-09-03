@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：视差贴图顶点着色器，建立 TBN 并把光源、相机和片元世界位置变换到切线空间。
+// 输入输出：位置、法线、UV、切线和副切线共同定义局部表面坐标系，输出供三张材质纹理共享。
+// 核心算法：片段阶段沿切线空间观察方向移动 UV，因此 viewDir.z 表示视线相对表面法线的倾斜程度。
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;

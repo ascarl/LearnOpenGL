@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：在方向光阴影贴图中用斜率相关 bias 抑制阴影痤疮，并用 3x3 PCF 软化锯齿。
+// 核心流程：深度 Pass 写入光空间最近深度，光照 Pass 投影当前片元并对邻域深度样本进行遮挡平均。
+// Pass 依赖：第二 Pass 读取 depthMap；超出光源远平面的片元不应被纹理边界错误判为阴影。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -120,6 +125,7 @@ int main()
 
     // configure depth map FBO
     // -----------------------
+    // 边界色设为白色深度，避免投影落在纹理外侧时因默认边界采样产生虚假阴影。
     const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
     unsigned int depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
@@ -217,6 +223,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
         glActiveTexture(GL_TEXTURE1);
+        // 最终 ShadowCalculation 在该 depthMap 上执行斜率 bias 与 3x3 PCF，环境光不受阴影衰减。
         glBindTexture(GL_TEXTURE_2D, depthMap);
         renderScene(shader);
 

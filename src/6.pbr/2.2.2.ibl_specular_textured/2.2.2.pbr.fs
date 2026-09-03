@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：PBR 片段着色器，在世界空间计算 metallic/roughness 工作流的直接光与当前阶段的环境项。
+// 输入输出：albedo/normal/metallic/roughness/AO 均由纹理逐片元提供；albedo 从 sRGB 数值解码到线性空间，法线经导数 TBN 转到世界空间。
+// 核心算法：直接光使用 D_GGX*G_Smith*F_Schlick/(4 NdotV NdotL)；IBL 以 irradiance 漫反射和 prefilterMap*(F*A+B) 镜面项组成。
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
@@ -47,6 +51,7 @@ vec3 getNormalFromMap()
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
+    // D_GGX：给定世界空间宏观法线 N，估计微表面法线与半程向量 H 对齐的统计密度。
     float a = roughness*roughness;
     float a2 = a*a;
     float NdotH = max(dot(N, H), 0.0);
@@ -72,6 +77,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 // ----------------------------------------------------------------------------
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
+    // G_Smith：估计世界空间观察与入射方向同时未被微表面自遮蔽的比例。
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
     float ggx2 = GeometrySchlickGGX(NdotV, roughness);
@@ -82,6 +88,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 // ----------------------------------------------------------------------------
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
+    // F_Schlick：由夹角和法向入射反射率 F0 近似界面反射能量，掠射角趋近全反射。
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 // ----------------------------------------------------------------------------
@@ -93,9 +100,11 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 void main()
 {		
     // material properties
+    // 基础色从 sRGB 解码到线性辐射计算空间；metallic、roughness、AO 则是线性数据通道。
     vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
     float metallic = texture(metallicMap, TexCoords).r;
     float roughness = texture(roughnessMap, TexCoords).r;
+    // AO 近似遮蔽所有环境入射方向，本实现因此只在 ambient IBL 合成后统一相乘。
     float ao = texture(aoMap, TexCoords).r;
        
     // input lighting data
@@ -106,6 +115,7 @@ void main()
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
     vec3 F0 = vec3(0.04); 
+    // 介电材质保留约 4% 无色法向反射；金属则以 albedo 作为有色 F0，metallic 在两者间插值。
     F0 = mix(F0, albedo, metallic);
 
     // reflectance equation
@@ -125,6 +135,7 @@ void main()
         vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);        
         
         vec3 numerator    = NDF * G * F;
+        // 分母 4(N·V)(N·L) 把微表面统计量转换为 BRDF；微小常数仅防止掠射角除零。
         float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
         vec3 specular = numerator / denominator;
         
@@ -138,6 +149,7 @@ void main()
         // have diffuse lighting, or a linear blend if partly metal (pure metals
         // have no diffuse light).
         kD *= 1.0 - metallic;	                
+        // 纯金属没有本模型中的漫反射；剩余能量 kD 与 Lambert albedo/PI 共同形成漫反射 BRDF。
             
         // scale light by NdotL
         float NdotL = max(dot(N, L), 0.0);        
@@ -153,11 +165,13 @@ void main()
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
     
+    // 漫反射 IBL 按世界空间 N 查询预卷积环境能量，再由材质 albedo 着色。
     vec3 irradiance = texture(irradianceMap, N).rgb;
     vec3 diffuse      = irradiance * albedo;
     
     // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
     const float MAX_REFLECTION_LOD = 4.0;
+    // roughness 映射到预过滤 mip；LUT 的 N·V/roughness 坐标补上与环境内容无关的 BRDF 积分。
     vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);

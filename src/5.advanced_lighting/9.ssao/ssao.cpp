@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用视空间位置/法线、半球采样核与旋转噪声估计屏幕空间环境光遮蔽。
+// 核心流程：几何 Pass 写 G-buffer，SSAO Pass 输出单通道遮蔽，模糊 Pass 降噪，最终光照 Pass 只用其调制环境光。
+// Pass 依赖：采样位置由视空间投影到屏幕查询 gPosition；四个 Pass 依次依赖前级附件，空间约定必须一致。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -98,6 +103,7 @@ int main()
     unsigned int gBuffer;
     glGenFramebuffers(1, &gBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+    // 与普通延迟着色不同，这里的位置和法线明确写成视空间，便于直接比较投影样本的 z。
     unsigned int gPosition, gNormal, gAlbedo;
     // position color buffer
     glGenTextures(1, &gPosition);
@@ -168,6 +174,7 @@ int main()
     std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0); // generates random floats between 0.0 and 1.0
     std::default_random_engine generator;
     std::vector<glm::vec3> ssaoKernel;
+    // 样本限制在法线正半球，并用二次插值把更多点聚集到原点附近以强调局部遮挡。
     for (unsigned int i = 0; i < 64; ++i)
     {
         glm::vec3 sample(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, randomFloats(generator));
@@ -183,6 +190,7 @@ int main()
 
     // generate noise texture
     // ----------------------
+    // 4x4 XY 随机向量平铺到屏幕，为每个片元旋转半球核，打散固定采样方向形成的条带。
     std::vector<glm::vec3> ssaoNoise;
     for (unsigned int i = 0; i < 16; i++)
     {
@@ -265,6 +273,7 @@ int main()
 
         // 2. generate SSAO texture
         // ------------------------
+        // 该 Pass 读取视空间位置/法线和噪声，输出未滤波的单通道可见度。
         glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
             glClear(GL_COLOR_BUFFER_BIT);
             shaderSSAO.use();
@@ -295,6 +304,7 @@ int main()
 
         // 4. lighting pass: traditional deferred Blinn-Phong lighting with added screen-space ambient occlusion
         // -----------------------------------------------------------------------------------------------------
+        // 光源也先变换到视空间；模糊 AO 仅调制环境项，直接光仍由几何关系决定。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shaderLightingPass.use();
         // send light relevant uniforms

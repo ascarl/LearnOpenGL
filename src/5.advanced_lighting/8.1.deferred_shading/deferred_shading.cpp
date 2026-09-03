@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：将几何属性写入 G-buffer，再以屏幕空间光照 Pass 高效累加大量点光源。
+// 核心流程：几何 Pass 写 gPosition、gNormal、gAlbedoSpec；光照 Pass 读取三附件；随后复制深度并正向绘制灯箱。
+// Pass 依赖：三个 G-buffer 附件均保存世界空间数据；深度 blit 让灯箱与前两 Pass 的场景深度正确遮挡。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -105,6 +110,7 @@ int main()
     unsigned int gBuffer;
     glGenFramebuffers(1, &gBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+    // 附件 0/1 用浮点格式保存世界位置和法线，附件 2 打包基础色 RGB 与镜面强度 A。
     unsigned int gPosition, gNormal, gAlbedoSpec;
     // position color buffer
     glGenTextures(1, &gPosition);
@@ -209,6 +215,7 @@ int main()
 
         // 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
         // -----------------------------------------------------------------------------------------------------------------------
+        // 此后不再提交模型几何；每个屏幕片元从三个附件恢复一次表面并遍历全部灯光。
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shaderLightingPass.use();
         glActiveTexture(GL_TEXTURE0);
@@ -236,6 +243,7 @@ int main()
         // ----------------------------------------------------------------------------------
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+        // 颜色已经由延迟 Pass 写完，这里只复制几何深度，供随后正向绘制的灯箱参与正确遮挡。
         // blit to default framebuffer. Note that this may or may not work as the internal formats of both the FBO and default framebuffer have to match.
         // the internal formats are implementation defined. This works on all of my systems, but if it doesn't on yours you'll likely have to write to the 		
         // depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).

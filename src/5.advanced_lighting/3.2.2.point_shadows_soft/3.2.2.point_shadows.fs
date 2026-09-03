@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：点光源相机 Pass 片段着色器，将世界空间光照与深度 Cubemap 可见度组合。
+// 输入输出：depthMap 以 light-to-fragment 方向查询最近径向距离，far_plane 还原世界空间尺度。
+// 核心算法：围绕查询方向取 20 个三维偏移样本并平均遮挡；采样半径随观察距离放大，形成柔和全向阴影。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -63,6 +67,7 @@ float ShadowCalculation(vec3 fragPos)
     float bias = 0.15;
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
+    // 距相机更远时增大世界方向偏移半径，使固定样本数下的阴影边缘保持可见的柔和程度。
     float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
     for(int i = 0; i < samples; ++i)
     {
@@ -71,6 +76,7 @@ float ShadowCalculation(vec3 fragPos)
         if(currentDepth - bias > closestDepth)
             shadow += 1.0;
     }
+    // 平均二值遮挡样本，把结果解释为该点附近光源方向被遮住的比例。
     shadow /= float(samples);
         
     // display closestDepth as debug (to visualize depth cubemap)

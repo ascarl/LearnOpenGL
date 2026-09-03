@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：HDR 场景 Pass 片段着色器，在线性空间累加最多十六个点光源的辐亮度。
+// 输入输出：diffuseTexture、世界空间 FragPos/Normal 与 lights 产生不截断的 FragColor。
+// 核心算法：1/d² 是点光源物理衰减；输出允许大于 1，依赖 RGBA16F hdrBuffer 保存动态范围。
 out vec4 FragColor;
 
 in VS_OUT {

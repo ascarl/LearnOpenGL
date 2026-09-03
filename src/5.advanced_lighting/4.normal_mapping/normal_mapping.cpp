@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：使用法线纹理恢复逐片元微表面方向，并通过 TBN 基把切线空间法线用于世界空间光照。
+// 核心流程：CPU 根据三角形位置与 UV 计算 tangent/bitangent，顶点阶段构造 TBN，片段阶段采样并重映射法线。
+// 观察重点：T、B、N 必须位于同一坐标空间且方向一致，否则凹凸方向、镜面高光或接缝会出错。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -82,6 +87,7 @@ int main()
 
     // load textures
     // -------------
+    // 颜色与法线纹理共享 UV；法线 RGB 是局部切线空间方向而不是可直接显示的颜色。
     unsigned int diffuseMap = loadTexture(FileSystem::getPath("resources/textures/brickwall.jpg").c_str());
     unsigned int normalMap  = loadTexture(FileSystem::getPath("resources/textures/brickwall_normal.jpg").c_str());
 
@@ -180,6 +186,7 @@ void renderQuad()
         glm::vec2 deltaUV1 = uv2 - uv1;
         glm::vec2 deltaUV2 = uv3 - uv1;
 
+        // 由位置边和 UV 边解线性方程，得到纹理 U/V 轴在模型表面对应的 tangent/bitangent。
         float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
         tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);

@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：HDR 场景 Pass 顶点着色器，输出世界空间位置、法线与 UV。
+// 输入输出：inverse_normals 翻转隧道内壁法线；normalMatrix 保持缩放后的方向正确。
+// Pass 依赖：这些世界空间量进入照明片段阶段，其大范围线性结果将写入 RGBA16F 附件。
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;

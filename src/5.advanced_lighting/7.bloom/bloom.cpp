@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：从 HDR 场景提取高亮区域，经可分离高斯模糊后叠加成 Bloom 光晕。
+// 核心流程：场景 Pass 用 MRT 写 colorBuffers[0] 场景色与 [1] 高亮色，乒乓 FBO 横纵模糊，最终 Pass 合成并曝光映射。
+// Pass 依赖：模糊首轮读取高亮附件，后续轮次交替读取上一张 pingpongColorbuffer；最终同时读取场景色和最后模糊结果。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -119,12 +124,14 @@ int main()
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
     // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
     unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    // 与片段 Shader 的 location 0/1 对齐：完整 HDR 场景和阈值高亮在一次几何绘制中同时生成。
     glDrawBuffers(2, attachments);
     // finally check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    // 两张单附件 FBO 交替充当读源和写目标，避免同一纹理在一次绘制中同时采样与写入。
     // ping-pong-framebuffer for blurring
     unsigned int pingpongFBO[2];
     unsigned int pingpongColorbuffers[2];
@@ -279,6 +286,7 @@ int main()
         {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
             shaderBlur.setInt("horizontal", horizontal);
+            // 首轮依赖 MRT 高亮附件，后续每轮依赖另一张 ping-pong 纹理，horizontal 每次翻转。
             glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
             renderQuad();
             horizontal = !horizontal;
@@ -294,6 +302,7 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
         glActiveTexture(GL_TEXTURE1);
+        // !horizontal 指向最后实际写完的模糊附件；最终 Pass 在线性 HDR 中叠加后再做 tone mapping。
         glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
         shaderBloomFinal.setInt("bloom", bloom);
         shaderBloomFinal.setFloat("exposure", exposure);

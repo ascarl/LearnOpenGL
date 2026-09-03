@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：用直接光照演示 Cook-Torrance 微表面 BRDF 以及 metallic、roughness、AO 的物理含义。
+// 核心流程：球体网格按行列扫描金属度与粗糙度，片段阶段组合 GGX 分布、Smith 几何遮蔽和 Fresnel 项。
+// 观察重点：metallic 控制漫反射与 F0 归属，roughness 控制高光展宽，AO 在本例只缩放环境项。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -101,6 +106,7 @@ int main()
     };
     int nrRows    = 7;
     int nrColumns = 7;
+    // 网格的纵轴扫描 metallic，横轴扫描 roughness，使两个材质维度的影响能在相同灯光下直接比较。
     float spacing = 2.5;
 
     // initialize static shader uniforms before rendering
@@ -137,11 +143,13 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
         for (int row = 0; row < nrRows; ++row) 
         {
+            // metallic=0 近似介电材质，接近 1 时基础色转为有色 F0 且漫反射趋近于零。
             shader.setFloat("metallic", (float)row / (float)nrRows);
             for (int col = 0; col < nrColumns; ++col) 
             {
                 // we clamp the roughness to 0.05 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
                 // on direct lighting.
+                // roughness 越大，GGX 微表面法线分布越宽，高光更宽且峰值更低。
                 shader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
                 
                 model = glm::mat4(1.0f);

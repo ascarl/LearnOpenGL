@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：将 HDR 环境的半球入射光卷积为低频辐照度 Cubemap，为 PBR 漫反射 IBL 提供间接光。
+// 核心流程：先转换环境 Cubemap，再逐面卷积写 irradianceMap，运行期用 N 查询该图并乘以漫反射反照率。
+// Pass 依赖：irradianceMap 依赖 envCubemap；其值近似法线方向半球上的 radiance*cos(theta) 积分。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -115,6 +120,7 @@ int main()
 
     // pbr: setup framebuffer
     // ----------------------
+    // 同一 captureFBO 依次承担经纬图转换与辐照度卷积，附件和 viewport 会随目标分辨率切换。
     unsigned int captureFBO;
     unsigned int captureRBO;
     glGenFramebuffers(1, &captureFBO);
@@ -199,6 +205,7 @@ int main()
 
     // pbr: create an irradiance cubemap, and re-scale capture FBO to irradiance scale.
     // --------------------------------------------------------------------------------
+    // 漫反射环境积分是低频信号，32x32 每面足够，并显著降低逐 texel 半球积分成本。
     unsigned int irradianceMap;
     glGenTextures(1, &irradianceMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
@@ -226,6 +233,7 @@ int main()
 
     glViewport(0, 0, 32, 32); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    // 六面逐一写入 irradianceMap；每个输出方向都在 Shader 中遍历其世界空间上半球。
     for (unsigned int i = 0; i < 6; ++i)
     {
         irradianceShader.setMat4("view", captureViews[i]);
@@ -277,6 +285,7 @@ int main()
 
         // bind pre-computed IBL data
         glActiveTexture(GL_TEXTURE0);
+        // 运行期只需以表面世界法线 N 查询预积分结果，无需再遍历环境样本。
         glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
 
         // render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively

@@ -1,3 +1,8 @@
+// LearnOpenGL 中文导读
+// 学习目标：比较 Phong 反射向量与 Blinn-Phong 半程向量两种镜面高光模型。
+// 核心流程：创建带纹理地板，逐帧在世界空间传入相机、光源与模型数据，并由片段着色器切换高光公式。
+// 观察重点：按 B 切换模型；Blinn-Phong 在低视角下通常比传统 Phong 高光更连续，指数取值也不能直接等价。
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
@@ -112,6 +117,7 @@ int main()
 
     // load textures
     // -------------
+    // 地板纹理固定绑定到纹理单元 0；本示例的变量只有镜面项采用反射向量还是半程向量。
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/wood.png").c_str());
     
     // shader configuration
@@ -151,6 +157,7 @@ int main()
         // set light uniforms
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
+        // CPU 开关不会改变几何数据，只选择片段着色器中的 Phong 或 Blinn-Phong 分支，便于同场景对照。
         shader.setInt("blinn", blinn);
         // floor
         glBindVertexArray(planeVAO);

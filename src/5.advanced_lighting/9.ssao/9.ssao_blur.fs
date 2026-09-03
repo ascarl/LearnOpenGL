@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：SSAO 模糊片段着色器，对原始遮蔽图执行 4x4 盒式平均。
+// 输入输出：ssaoInput 是噪声较大的单通道 SSAO 附件，FragColor 写入 ssaoColorBufferBlur。
+// Pass 依赖：最终光照只读取该平滑结果，并用它缩放环境光而非直接光。
 out float FragColor;
 
 in vec2 TexCoords;

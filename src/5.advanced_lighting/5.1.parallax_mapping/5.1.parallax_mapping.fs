@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：基本视差贴图片段着色器，先偏移 UV，再以同一坐标采样颜色、法线和高度。
+// 输入输出：depthMap.r 是归一化高度，heightScale 控制虚拟凹凸幅度，viewDir 位于切线空间。
+// 核心算法：UV'=UV-viewDir.xy*height*scale；一次近似没有除以 viewDir.z，斜视角下误差较明显。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -18,6 +22,7 @@ uniform float heightScale;
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
     float height =  texture(depthMap, texCoords).r;     
+    // 切线空间 viewDir.xy 给出沿表面的观察投影；高度越大，向视线反方向回移的 UV 越多。
     return texCoords - viewDir.xy * (height * heightScale);        
 }
 

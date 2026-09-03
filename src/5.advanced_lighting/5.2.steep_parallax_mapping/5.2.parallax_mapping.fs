@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：陡峭视差贴图片段着色器，沿切线空间观察射线逐层搜索高度场交点。
+// 输入输出：层数在 8 到 32 间随 |N·V| 调整，depthMap 与累计 layerDepth 决定何时停止。
+// 核心算法：P=viewDir.xy/viewDir.z*heightScale 给出整段 UV 位移；逐层步进比单次偏移更接近实际交点。
 out vec4 FragColor;
 
 in VS_OUT {
@@ -20,12 +24,14 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     // number of depth layers
     const float minLayers = 8;
     const float maxLayers = 32;
+    // 正视时 |N·V| 接近 1，使用较少层；斜视时增加层数以降低射线步进误差。
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
     // calculate the size of each layer
     float layerDepth = 1.0 / numLayers;
     // depth of current layer
     float currentLayerDepth = 0.0;
     // the amount to shift the texture coordinates per layer (from vector P)
+    // 除以 viewDir.z 把视线斜率换成穿过完整单位高度时的总 UV 位移。
     vec2 P = viewDir.xy / viewDir.z * heightScale; 
     vec2 deltaTexCoords = P / numLayers;
   

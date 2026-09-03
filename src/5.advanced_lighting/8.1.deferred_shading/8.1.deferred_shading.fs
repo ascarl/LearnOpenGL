@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：延迟光照片段着色器，从 G-buffer 重建表面数据并累加 32 个世界空间点光源。
+// 输入输出：gPosition/gNormal/gAlbedoSpec 分别提供位置、法线、基础色与镜面强度；viewPos 也在世界空间。
+// 核心算法：每个可见屏幕片元统一遍历灯光，按衰减、N·L 与 Blinn-Phong 高光计算最终颜色。
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -21,6 +25,7 @@ uniform vec3 viewPos;
 void main()
 {             
     // retrieve data from gbuffer
+    // 一个 UV 对应几何 Pass 的同一可见片元，因此无需再次提交模型顶点即可恢复完整光照输入。
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
     vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;

@@ -1,4 +1,8 @@
 #version 330 core
+// LearnOpenGL 中文导读
+// 着色阶段：相机几何顶点着色器，同时准备世界空间光照数据与光空间投影位置。
+// 输入输出：输出 FragPos、Normal、TexCoords 以及 FragPosLightSpace；最终 gl_Position 仍使用相机 view/projection。
+// Pass 依赖：FragPosLightSpace 把当前片元映射到第一 Pass 的 depthMap 坐标系，供片段阶段比较遮挡。
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
